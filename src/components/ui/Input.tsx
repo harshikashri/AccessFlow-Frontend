@@ -4,7 +4,7 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   label?: string;
   helperText?: string;
   error?: string;
-  type?: 'text' | 'email' | 'password' | 'number' | 'search';
+  type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'date';
   controlSize?: 'sm' | 'md' | 'lg';
   leadingIcon?: ReactNode;
   trailingIcon?: ReactNode;

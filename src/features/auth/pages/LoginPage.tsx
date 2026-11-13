@@ -39,7 +39,12 @@ export function LoginPage() {
           'Choose an organization to continue. Only organization IDs are available here.',
         );
       } else {
-        setFormError(getAuthErrorMessage(error, 'Sign in failed. Please try again.'));
+        setFormError(
+          getAuthErrorMessage(
+            error,
+            'Unable to reach the server. Check your connection and try again.',
+          ),
+        );
       }
     } finally {
       setIsSubmitting(false);

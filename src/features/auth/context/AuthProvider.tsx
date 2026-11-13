@@ -7,6 +7,7 @@ import {
   installAuthInterceptors,
   refreshAccessToken,
 } from '@/features/auth/services/auth-interceptors';
+import { dashboardQueryKeys } from '@/features/dashboard/hooks/dashboard-query-keys';
 import { AuthContext } from '@/features/auth/context/AuthContext';
 import type {
   AuthenticatedUser,
@@ -111,13 +112,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const login = useCallback(
     async (payload: LoginRequest) => {
-      setState({
-        status: 'initializing',
-        authorizationStatus: 'loading',
-        user: null,
-        error: null,
-      });
-
       try {
         const session = await authService.login(payload);
         accessTokenStore.set(session.accessToken);
@@ -139,6 +133,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setState((current) => ({ ...current, authorizationStatus: 'loading', error: null }));
     try {
       const user = await loadCurrentUser();
+      queryClient.removeQueries({ queryKey: dashboardQueryKeys.all });
       setState((current) =>
         current.status === 'authenticated'
           ? { ...current, authorizationStatus: 'available', user, error: null }
