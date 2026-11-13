@@ -1,10 +1,13 @@
 import type { PropsWithChildren, ReactNode, Ref } from 'react';
 import { ContentContainer } from '@/components/common/ContentContainer';
+import { AppIcon } from '@/components/common/AppIcon';
 
 export interface SidebarProps extends PropsWithChildren {
   brand?: ReactNode;
   footer?: ReactNode;
   open?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onNavigate?: () => void;
   sidebarRef?: Ref<HTMLElement>;
 }
@@ -13,6 +16,8 @@ export function Sidebar({
   brand,
   footer,
   open = false,
+  collapsed = false,
+  onToggleCollapse,
   onNavigate,
   sidebarRef,
   children,
@@ -22,11 +27,26 @@ export function Sidebar({
       ref={sidebarRef}
       className="dashboard-sidebar"
       data-open={open}
+      data-collapsed={collapsed}
       aria-label="Primary navigation"
     >
-      {brand && <div className="dashboard-sidebar__brand">{brand}</div>}
+      <div className="dashboard-sidebar__brand">
+        {brand}
+        {onToggleCollapse && (
+          <button
+            className="dashboard-sidebar__collapse"
+            type="button"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            onClick={onToggleCollapse}
+          >
+            <AppIcon name={collapsed ? 'expand' : 'collapse'} size={18} />
+          </button>
+        )}
+      </div>
       <nav
         className="dashboard-sidebar__navigation"
+        aria-label="Workspace"
         onClick={(event) => {
           if (event.target instanceof Element && event.target.closest('a')) {
             onNavigate?.();
@@ -41,7 +61,7 @@ export function Sidebar({
 }
 
 export interface HeaderProps extends PropsWithChildren {
-  title?: string | undefined;
+  title?: ReactNode;
   menuOpen?: boolean;
   onMenuClick?: () => void;
   menuButtonRef?: Ref<HTMLButtonElement>;
@@ -65,7 +85,7 @@ export function Header({
           aria-expanded={menuOpen}
           onClick={onMenuClick}
         >
-          <span aria-hidden="true">☰</span>
+          <AppIcon name="menu" />
         </button>
       )}
       {title && <div className="dashboard-header__title">{title}</div>}

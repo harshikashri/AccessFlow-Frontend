@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '@/features/auth/context/AuthProvider';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { accessTokenStore } from '@/features/auth/services/access-token.store';
-import type { PublicUser } from '@/features/auth/types/auth.types';
+import type { AuthenticatedUser, PublicUser } from '@/features/auth/types/auth.types';
 
 const authServiceMock = vi.hoisted(() => ({
   login: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock('@/features/auth/services/auth.service', () => ({
   authService: authServiceMock,
 }));
 
-const user: PublicUser = {
+const publicUser: PublicUser = {
   id: 'user-1',
   name: 'Test User',
   email: 'user@example.com',
@@ -29,7 +29,23 @@ const user: PublicUser = {
   organizationId: 'org-1',
 };
 
-const session = { accessToken: 'memory-only-token', user };
+const user: AuthenticatedUser = {
+  ...publicUser,
+  authorization: {
+    platformPermissions: [],
+    organizationPermissions: ['dashboard.view'],
+    departmentPermissions: {},
+  },
+};
+
+const session = { accessToken: 'memory-only-token', user: publicUser };
+const updatedUser: AuthenticatedUser = {
+  ...user,
+  authorization: {
+    ...user.authorization,
+    organizationPermissions: ['dashboard.view', 'users.view'],
+  },
+};
 
 function Probe() {
   const auth = useAuth();
@@ -38,10 +54,16 @@ function Probe() {
     <div>
       <output data-testid="status">{auth.status}</output>
       <output data-testid="error">{auth.error ?? ''}</output>
-      <button onClick={() => void auth.login({ email: user.email, password: 'StrongPass!1' })}>
+      <output data-testid="authorization">
+        {auth.user?.authorization.organizationPermissions.join(',') ?? ''}
+      </output>
+      <button
+        onClick={() => void auth.login({ email: publicUser.email, password: 'StrongPass!1' })}
+      >
         Sign in
       </button>
       <button onClick={() => void auth.logoutAll()}>Sign out all</button>
+      <button onClick={() => void auth.refreshCurrentUser()}>Refresh access</button>
     </div>
   );
 }
@@ -82,7 +104,42 @@ describe('AuthProvider', () => {
 
     await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'));
     expect(authServiceMock.currentUser).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('authorization').textContent).toBe('dashboard.view');
     expect(accessTokenStore.get()).toBe('memory-only-token');
+  });
+
+  it('loads the /me authorization after login instead of trusting login profile data', async () => {
+    authServiceMock.refresh.mockRejectedValue({
+      isAxiosError: true,
+      message: 'Session expired',
+      response: {
+        status: 401,
+        data: { success: false, code: 'INVALID_REFRESH_TOKEN', message: 'Session expired' },
+      },
+    });
+    authServiceMock.currentUser.mockResolvedValue(user);
+
+    renderProvider();
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('unauthenticated'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'));
+    expect(authServiceMock.currentUser).toHaveBeenCalledOnce();
+    expect(screen.getByTestId('authorization').textContent).toBe('dashboard.view');
+  });
+
+  it('updates authorization after an explicit profile refresh', async () => {
+    authServiceMock.refresh.mockResolvedValue(session);
+    authServiceMock.currentUser.mockResolvedValueOnce(user).mockResolvedValueOnce(updatedUser);
+
+    renderProvider();
+    await waitFor(() => expect(screen.getByTestId('status').textContent).toBe('authenticated'));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh access' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('authorization').textContent).toBe('dashboard.view,users.view'),
+    );
   });
 
   it('returns to an unauthenticated state when refresh rejects the cookie session', async () => {

@@ -1,0 +1,25 @@
+export const PERMISSION_IDS = [
+  'users.view',
+  'users.create',
+  'users.edit',
+  'users.deactivate',
+  'departments.view',
+  'departments.create',
+  'departments.edit',
+  'roles.view',
+  'roles.create',
+  'roles.edit',
+  'requests.view',
+  'requests.create',
+  'requests.edit_own_draft',
+  'requests.submit',
+  'requests.cancel_own',
+  'requests.approve',
+  'requestTypes.manage',
+  'workflows.view',
+  'workflows.manage',
+  'audit_logs.view',
+  'dashboard.view',
+] as const;
+
+export type PermissionId = (typeof PERMISSION_IDS)[number];

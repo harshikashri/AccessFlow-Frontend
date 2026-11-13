@@ -6,6 +6,7 @@ import '@/styles/reset.css';
 import '@/styles/variables.css';
 import '@/styles/globals.css';
 import '@/styles/components.css';
+import '@/styles/application.css';
 import '@/styles/auth.css';
 
 const rootElement = document.getElementById('root');

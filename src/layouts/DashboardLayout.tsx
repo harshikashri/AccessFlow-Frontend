@@ -1,13 +1,16 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { Outlet } from 'react-router-dom';
 import { Header, LayoutContent, Sidebar } from './LayoutPrimitives';
 
 export interface DashboardLayoutProps extends PropsWithChildren {
   sidebar?: ReactNode;
   sidebarBrand?: ReactNode;
   sidebarFooter?: ReactNode;
-  title?: string;
+  title?: ReactNode;
   headerActions?: ReactNode;
+  sidebarCollapsed?: boolean;
+  onSidebarCollapsedChange?: (collapsed: boolean) => void;
 }
 
 export function DashboardLayout({
@@ -17,6 +20,8 @@ export function DashboardLayout({
   sidebarFooter,
   title,
   headerActions,
+  sidebarCollapsed = false,
+  onSidebarCollapsedChange,
 }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -40,15 +45,17 @@ export function DashboardLayout({
   }, [sidebarOpen]);
 
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" data-collapsed={sidebarCollapsed}>
       <Sidebar
         brand={sidebarBrand}
         footer={sidebarFooter}
         open={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => onSidebarCollapsedChange?.(!sidebarCollapsed)}
         sidebarRef={sidebarRef}
         onNavigate={() => {
           setSidebarOpen(false);
-          menuButtonRef.current?.focus();
+          if (sidebarOpen) menuButtonRef.current?.focus();
         }}
       >
         {sidebar}
@@ -73,7 +80,7 @@ export function DashboardLayout({
         >
           {headerActions}
         </Header>
-        <LayoutContent>{children}</LayoutContent>
+        <LayoutContent>{children ?? <Outlet />}</LayoutContent>
       </div>
     </div>
   );
