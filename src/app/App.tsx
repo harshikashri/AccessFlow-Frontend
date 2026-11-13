@@ -7,7 +7,7 @@ import {
   isPlatformSession,
 } from '@/features/authorization/navigation';
 import { hasPermission } from '@/features/authorization/permissions';
-import { FeaturePlaceholderPage } from '@/app/pages/FeaturePlaceholderPage';
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { APP_ROUTES } from '@/routes/route.constants';
 
 export function App() {
@@ -18,12 +18,11 @@ export function App() {
   }
   if (!user) return <Navigate to={APP_ROUTES.forbidden} replace />;
 
-  if (isPlatformSession(user)) {
-    return <FeaturePlaceholderPage itemId="platform-dashboard" />;
-  }
-
-  if (hasPermission(user.authorization, 'dashboard.view', 'organization-or-department')) {
-    return <FeaturePlaceholderPage itemId="dashboard" />;
+  if (
+    isPlatformSession(user) ||
+    hasPermission(user.authorization, 'dashboard.view', 'organization-or-department')
+  ) {
+    return <DashboardPage />;
   }
 
   const firstAllowedPath = getFirstNavigationPath(getVisibleNavigation(user, authorizationStatus));
