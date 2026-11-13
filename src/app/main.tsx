@@ -5,6 +5,7 @@ import { AppRouter } from '@/app/router';
 import '@/styles/reset.css';
 import '@/styles/variables.css';
 import '@/styles/globals.css';
+import '@/styles/components.css';
 
 const rootElement = document.getElementById('root');
 

@@ -1,1 +1,1 @@
-export const APP_NAME = 'FuzioNest';
+export const APP_NAME = 'AccessFlow';

@@ -1,6 +1,6 @@
 import { env } from '@/config/env';
 
 export const appConfig = Object.freeze({
-  name: 'FuzioNest',
+  name: 'AccessFlow',
   apiBaseUrl: env.apiBaseUrl,
 });

@@ -1,6 +1,6 @@
-# FuzioNest Frontend
+# AccessFlow Frontend
 
-The FuzioNest frontend is a standalone React application for the Enterprise Access & Workflow Management Platform. This repository contains the client foundation only; feature flows and business functionality have not been implemented.
+The AccessFlow frontend is a standalone React application for the Enterprise Access & Workflow Management Platform. This repository contains the client foundation only; feature flows and business functionality have not been implemented.
 
 ## Technology
 
@@ -15,13 +15,20 @@ The FuzioNest frontend is a standalone React application for the Enterprise Acce
 
 - `src/app`: application entry point, providers, and router.
 - `src/assets`: static images, icons, and fonts.
-- `src/components`: shared UI, common, and feedback components.
+- `src/app/pages`: application pages, including the development-only component showcase.
+- `src/components/ui`: reusable controls and display primitives; `common` and `feedback` contain shared page and state components.
 - `src/config` and `src/constants`: validated environment and shared configuration.
 - `src/features`: isolated business modules for auth, dashboard, organizations, departments, users, roles, requests, approvals, audit logs, and settings.
 - `src/layouts` and `src/routes`: shared layout and routing primitives. Route access wrappers accept explicit state and are not connected to authentication.
 - `src/lib` and `src/services`: third-party client configuration and shared API infrastructure.
 - `src/stores`: reserved for genuinely global client-side state; server state belongs in TanStack Query.
 - `src/styles`, `src/types`, and `src/utils`: global styling, shared types, and pure utilities.
+
+## Design system preview
+
+Run `npm run dev` and open `/ui-showcase` to explore the reusable components and responsive layout foundation. This route is registered only in Vite development mode and is not included in production routing. Design tokens are centralized in `src/styles/variables.css`; shared component and responsive layout styles live in `src/styles/components.css`.
+
+The UI foundation includes accessible buttons, form controls, cards, badges, dialogs, dropdowns, tabs, tooltips, tables, avatars, separators, skeletons, spinners, alerts, and toasts. It does not implement authentication or feature workflows.
 
 ## Prerequisites
 
