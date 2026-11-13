@@ -2,11 +2,12 @@ import type { AxiosResponse } from 'axios';
 import { apiClient } from '@/services/api/api-client';
 import type {
   ApiEnvelope,
+  AuthenticatedUser,
   AuthSessionResponse,
   LoginRequest,
   PasswordTokenRequest,
-  PublicUser,
 } from '@/features/auth/types/auth.types';
+import { isAuthenticatedUser } from '@/features/auth/utils/auth-user';
 
 function unwrap<T>(response: AxiosResponse<ApiEnvelope<T>>): T {
   return response.data.data;
@@ -23,9 +24,13 @@ export const authService = {
     return unwrap(response);
   },
 
-  async currentUser(): Promise<PublicUser> {
-    const response = await apiClient.get<ApiEnvelope<{ user: PublicUser }>>('/auth/me');
-    return unwrap(response).user;
+  async currentUser(): Promise<AuthenticatedUser> {
+    const response = await apiClient.get<ApiEnvelope<{ user: unknown }>>('/auth/me');
+    const user = unwrap(response).user;
+    if (!isAuthenticatedUser(user)) {
+      throw new Error('The current-user response did not contain valid authorization information.');
+    }
+    return user;
   },
 
   async logout(): Promise<void> {

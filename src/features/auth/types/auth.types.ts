@@ -1,9 +1,15 @@
+import type { AuthorizationInfo } from '@/features/authorization/authorization.types';
+
 export interface PublicUser {
   id: string;
   name: string;
   email: string;
   platformRole: 'SUPER_ADMIN' | null;
   organizationId: string | null;
+}
+
+export interface AuthenticatedUser extends PublicUser {
+  authorization: AuthorizationInfo;
 }
 
 export interface AuthSessionResponse {
@@ -37,3 +43,4 @@ export interface ApiErrorResponse {
 }
 
 export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated' | 'unavailable';
+export type AuthorizationStatus = 'loading' | 'available' | 'unavailable';

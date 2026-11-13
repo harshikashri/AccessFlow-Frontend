@@ -21,6 +21,17 @@ const session = {
   },
 };
 
+const currentUser = {
+  ...session.user,
+  authorization: {
+    platformPermissions: [],
+    organizationPermissions: ['dashboard.view', 'users.view'],
+    departmentPermissions: {
+      '64b000000000000000000001': ['requests.approve'],
+    },
+  },
+};
+
 beforeEach(() => {
   apiClientMock.get.mockReset();
   apiClientMock.post.mockReset();
@@ -51,6 +62,38 @@ describe('auth service API contracts', () => {
     await expect(authService.refresh()).resolves.toEqual(session);
 
     expect(apiClientMock.post).toHaveBeenCalledWith('/auth/refresh');
+  });
+
+  it('returns the authenticated /me profile with validated effective authorization data', async () => {
+    apiClientMock.get.mockResolvedValue({
+      data: { success: true, data: { user: currentUser } },
+    });
+
+    await expect(authService.currentUser()).resolves.toEqual(currentUser);
+    expect(apiClientMock.get).toHaveBeenCalledWith('/auth/me');
+  });
+
+  it('rejects missing or unsupported authorization data from /me', async () => {
+    apiClientMock.get.mockResolvedValue({
+      data: { success: true, data: { user: session.user } },
+    });
+    await expect(authService.currentUser()).rejects.toThrow(/valid authorization information/);
+
+    apiClientMock.get.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          user: {
+            ...currentUser,
+            authorization: {
+              ...currentUser.authorization,
+              organizationPermissions: ['users.root'],
+            },
+          },
+        },
+      },
+    });
+    await expect(authService.currentUser()).rejects.toThrow(/valid authorization information/);
   });
 
   it('uses the verified password-flow request shapes', async () => {

@@ -1,10 +1,12 @@
 import { createContext } from 'react';
-import type { LoginRequest, PublicUser } from '@/features/auth/types/auth.types';
+import type { AuthenticatedUser, LoginRequest } from '@/features/auth/types/auth.types';
 import type { AuthStatus } from '@/features/auth/types/auth.types';
+import type { AuthorizationStatus } from '@/features/auth/types/auth.types';
 
 export interface AuthContextValue {
   status: AuthStatus;
-  user: PublicUser | null;
+  authorizationStatus: AuthorizationStatus;
+  user: AuthenticatedUser | null;
   error: string | null;
   isInitializing: boolean;
   isAuthenticated: boolean;
@@ -12,6 +14,7 @@ export interface AuthContextValue {
   logout: () => Promise<void>;
   logoutAll: () => Promise<number>;
   restoreSession: () => Promise<void>;
+  refreshCurrentUser: () => Promise<AuthenticatedUser>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

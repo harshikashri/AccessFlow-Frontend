@@ -8,24 +8,33 @@ import {
   refreshAccessToken,
 } from '@/features/auth/services/auth-interceptors';
 import { AuthContext } from '@/features/auth/context/AuthContext';
-import type { AuthStatus, PublicUser } from '@/features/auth/types/auth.types';
-import type { AuthSessionResponse, LoginRequest } from '@/features/auth/types/auth.types';
+import type {
+  AuthenticatedUser,
+  AuthStatus,
+  AuthorizationStatus,
+  LoginRequest,
+} from '@/features/auth/types/auth.types';
 
 interface AuthState {
   status: AuthStatus;
-  user: PublicUser | null;
+  authorizationStatus: AuthorizationStatus;
+  user: AuthenticatedUser | null;
   error: string | null;
 }
 
 const initialState: AuthState = {
   status: 'initializing',
+  authorizationStatus: 'loading',
   user: null,
   error: null,
 };
 
-function toAuthenticatedState(session: AuthSessionResponse, user = session.user): AuthState {
+const currentUserQueryKey = ['auth', 'current-user'] as const;
+
+function toAuthenticatedState(user: AuthenticatedUser): AuthState {
   return {
     status: 'authenticated',
+    authorizationStatus: 'available',
     user,
     error: null,
   };
@@ -40,36 +49,42 @@ export function AuthProvider({ children }: PropsWithChildren) {
     queryClient.clear();
     setState({
       status: 'unauthenticated',
+      authorizationStatus: 'unavailable',
       user: null,
       error: null,
     });
   }, [queryClient]);
 
+  const loadCurrentUser = useCallback(
+    () =>
+      queryClient.fetchQuery({
+        queryKey: currentUserQueryKey,
+        queryFn: () => authService.currentUser(),
+        staleTime: 0,
+      }),
+    [queryClient],
+  );
+
   useEffect(
     () =>
       installAuthInterceptors({
         onSessionInvalidated: clearSession,
-        onSessionRefreshed: (session) => {
-          setState((current) =>
-            current.status === 'authenticated' ? toAuthenticatedState(session) : current,
-          );
-        },
       }),
     [clearSession],
   );
 
   const restoreSession = useCallback(async () => {
-    setState((current) => ({
-      status: current.status === 'authenticated' ? current.status : 'initializing',
-      user: current.user,
+    setState({
+      status: 'initializing',
+      authorizationStatus: 'loading',
+      user: null,
       error: null,
-    }));
+    });
 
     try {
-      const session = await refreshAccessToken();
-      const user = await authService.currentUser();
-      accessTokenStore.set(session.accessToken);
-      setState(toAuthenticatedState(session, user));
+      await refreshAccessToken();
+      const user = await loadCurrentUser();
+      setState(toAuthenticatedState(user));
     } catch (error) {
       if (isTerminalSessionError(error)) {
         clearSession();
@@ -77,8 +92,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       accessTokenStore.clear();
+      queryClient.clear();
       setState({
         status: 'unavailable',
+        authorizationStatus: 'unavailable',
         user: null,
         error: getAuthErrorMessage(
           error,
@@ -86,20 +103,67 @@ export function AuthProvider({ children }: PropsWithChildren) {
         ),
       });
     }
-  }, [clearSession]);
+  }, [clearSession, loadCurrentUser, queryClient]);
 
   useEffect(() => {
     void restoreSession();
   }, [restoreSession]);
 
-  const login = useCallback(async (payload: LoginRequest) => {
-    const session = await authService.login(payload);
-    accessTokenStore.set(session.accessToken);
-    setState(toAuthenticatedState(session));
-  }, []);
+  const login = useCallback(
+    async (payload: LoginRequest) => {
+      setState({
+        status: 'initializing',
+        authorizationStatus: 'loading',
+        user: null,
+        error: null,
+      });
+
+      try {
+        const session = await authService.login(payload);
+        accessTokenStore.set(session.accessToken);
+        const user = await loadCurrentUser();
+        setState(toAuthenticatedState(user));
+      } catch (error) {
+        clearSession();
+        throw error;
+      }
+    },
+    [clearSession, loadCurrentUser],
+  );
+
+  const refreshCurrentUser = useCallback(async () => {
+    if (state.status !== 'authenticated' || !state.user) {
+      throw new Error('An authenticated session is required to refresh the profile.');
+    }
+
+    setState((current) => ({ ...current, authorizationStatus: 'loading', error: null }));
+    try {
+      const user = await loadCurrentUser();
+      setState((current) =>
+        current.status === 'authenticated'
+          ? { ...current, authorizationStatus: 'available', user, error: null }
+          : current,
+      );
+      return user;
+    } catch (error) {
+      queryClient.removeQueries({ queryKey: currentUserQueryKey });
+      setState((current) =>
+        current.status === 'authenticated'
+          ? {
+              ...current,
+              authorizationStatus: 'unavailable',
+              error: getAuthErrorMessage(
+                error,
+                'We could not refresh your access. Try again before continuing.',
+              ),
+            }
+          : current,
+      );
+      throw error;
+    }
+  }, [loadCurrentUser, queryClient, state.status, state.user]);
 
   const logout = useCallback(async () => {
-    await authService.currentUser();
     await authService.logout();
     clearSession();
   }, [clearSession]);
@@ -119,8 +183,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       logout,
       logoutAll,
       restoreSession,
+      refreshCurrentUser,
     }),
-    [login, logout, logoutAll, restoreSession, state],
+    [login, logout, logoutAll, refreshCurrentUser, restoreSession, state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
