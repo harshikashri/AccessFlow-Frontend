@@ -1,12 +1,9 @@
-export interface PublicUser {
-  id: string;
-  name: string;
-  email: string;
-  platformRole: 'SUPER_ADMIN' | null;
-  organizationId: string | null;
-}
-
-export interface AuthSessionResponse {
-  accessToken: string;
-  user: PublicUser;
-}
+export type {
+  ApiEnvelope,
+  ApiErrorResponse,
+  AuthSessionResponse,
+  AuthStatus,
+  LoginRequest,
+  PasswordTokenRequest,
+  PublicUser,
+} from '@/features/auth/types/auth.types';

@@ -1,5 +1,8 @@
 export const APP_ROUTES = Object.freeze({
   root: '/',
-  signIn: '/sign-in',
-  dashboard: '/dashboard',
+  signIn: '/login',
+  dashboard: '/',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  setPassword: '/set-password',
 });
