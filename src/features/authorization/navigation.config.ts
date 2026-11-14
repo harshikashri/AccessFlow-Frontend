@@ -70,7 +70,7 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         id: 'organizations',
         label: 'Organizations',
         icon: 'organizations',
-        description: 'A future workspace for platform organization management.',
+        description: 'Manage platform organizations and their access status.',
         section: 'Platform',
         path: APP_ROUTES.organizations,
         requirement: { kind: 'platform-session' },

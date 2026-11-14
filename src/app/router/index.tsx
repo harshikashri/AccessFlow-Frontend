@@ -10,6 +10,10 @@ import { ProfilePage } from '@/app/pages/ProfilePage';
 import { ForgotPasswordPage } from '@/features/auth/pages/ForgotPasswordPage';
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { PasswordTokenPage } from '@/features/auth/pages/PasswordTokenPage';
+import { OrganizationCreatePage } from '@/features/organizations/pages/OrganizationCreatePage';
+import { OrganizationDetailsPage } from '@/features/organizations/pages/OrganizationDetailsPage';
+import { OrganizationEditPage } from '@/features/organizations/pages/OrganizationEditPage';
+import { OrganizationListPage } from '@/features/organizations/pages/OrganizationListPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -55,7 +59,31 @@ const routes: RouteObject[] = [
         path: 'organizations',
         element: (
           <AuthorizationRoute itemId="organizations">
-            <FeaturePlaceholderPage itemId="organizations" />
+            <OrganizationListPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'organizations/new',
+        element: (
+          <AuthorizationRoute itemId="organizations">
+            <OrganizationCreatePage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'organizations/:organizationId/edit',
+        element: (
+          <AuthorizationRoute itemId="organizations">
+            <OrganizationEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'organizations/:organizationId',
+        element: (
+          <AuthorizationRoute itemId="organizations">
+            <OrganizationDetailsPage />
           </AuthorizationRoute>
         ),
       },

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   Badge,
   Card,
@@ -293,7 +294,14 @@ function OrganizationAnalyticsView({ data }: { data: OrganizationAnalytics }) {
           ) : (
             data.organizations.slice(0, 10).map((organization) => (
               <TableRow key={organization.organizationId}>
-                <TableCell>{organization.organizationName}</TableCell>
+                <TableCell>
+                  <Link
+                    className="dashboard-organization-link"
+                    to={`/organizations/${organization.organizationId}`}
+                  >
+                    {organization.organizationName}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant(organization.status)}>{organization.status}</Badge>
                 </TableCell>

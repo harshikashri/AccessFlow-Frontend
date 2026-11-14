@@ -234,7 +234,20 @@ describe('DashboardPage', () => {
         absoluteDifference: 1,
         percentageChange: 100,
       },
-      organizations: [],
+      organizations: [
+        {
+          organizationId: '507f1f77bcf86cd799439011',
+          organizationName: 'Acme Corporation',
+          status: 'ACTIVE',
+          createdAt: '2026-11-01T10:00:00.000Z',
+          totalMemberships: 4,
+          activeMemberships: 4,
+          inactiveMemberships: 0,
+          totalDepartments: 2,
+          totalRequests: 7,
+          periodRequests: 1,
+        },
+      ],
       dateRange,
     });
 
@@ -245,6 +258,8 @@ describe('DashboardPage', () => {
     expect((await screen.findAllByText('2')).length).toBeGreaterThan(0);
     expect(screen.getByText('Organization registrations')).toBeTruthy();
     expect(screen.getByRole('link', { name: /view organizations/i })).toBeTruthy();
+    const organizationLink = await screen.findByRole('link', { name: 'Acme Corporation' });
+    expect(organizationLink.getAttribute('href')).toBe('/organizations/507f1f77bcf86cd799439011');
     expect(dashboardServiceMock.getAnalytics).toHaveBeenCalledTimes(1);
     expect(dashboardServiceMock.getAnalytics).toHaveBeenCalledWith(
       'ORGANIZATIONS',
