@@ -379,7 +379,11 @@ function DepartmentAnalyticsView({ data }: { data: DepartmentAnalytics }) {
             ) : (
               directory.departments.map((department) => (
                 <TableRow key={department.departmentId}>
-                  <TableCell>{department.departmentName}</TableCell>
+                  <TableCell>
+                    <Link to={`/departments/${department.departmentId}`}>
+                      {department.departmentName}
+                    </Link>
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(department.status)}>{department.status}</Badge>
                   </TableCell>
