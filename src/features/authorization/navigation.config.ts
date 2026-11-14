@@ -171,6 +171,15 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
             requirement: permissionRequirement('requests.view', 'organization-or-department'),
           },
           {
+            id: 'my-requests',
+            label: 'My requests',
+            icon: 'requests',
+            description: 'Track requests created by you.',
+            section: 'Requests',
+            path: APP_ROUTES.myRequests,
+            requirement: permissionRequirement('requests.view', 'organization-or-department'),
+          },
+          {
             id: 'new-request',
             label: 'New request',
             icon: 'create',

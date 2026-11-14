@@ -36,7 +36,7 @@ Run `npm run dev` and open `/ui-showcase` to explore the reusable components and
 
 The UI foundation includes accessible buttons, form controls, cards, badges, dialogs, dropdowns, tabs, tooltips, tables, avatars, separators, skeletons, spinners, alerts, and toasts.
 
-The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, tenant department management, and tenant user management routes load API-backed data. Roles, workflows, requests, approvals, and audit logs remain informational placeholders. Notifications are also a UI placeholder because no notification API is available.
+The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, tenant department management, tenant user management, role management, and request management routes load API-backed data. Workflows, approvals, and audit logs remain informational placeholders. Request attachments are displayed when returned by the API, but the current backend exposes metadata only and has no upload/download endpoint. Notifications continue to use backend workflow services rather than frontend code.
 
 ## Prerequisites
 
@@ -123,6 +123,39 @@ The directory requests server-side pages and supports only backend-supported nam
 Deactivation retains department membership and manager references; it does not delete users or remove role assignments. The backend blocks editing and new member additions while inactive, and department-scoped permissions are not effective for inactive departments. The UI confirms the change and describes these effects. Details show members read-only; although the backend has member-add/remove endpoints, those actions are left to the User Management phase. No department activity read endpoint is implemented (the audit module has no read route), so department audit events are not fetched or represented as a department activity feed.
 
 Phase 5 Organization Details remains platform-only and cannot safely embed tenant department data: its Super Admin session has no organization context, and there is no platform organization-switching or organization-scoped department-list API. Department links are available through the tenant navigation and details routes instead. Dashboard Quick Actions now link authorized organization-wide creators directly to the dedicated department creation route.
+
+## Request management (Phase 9)
+
+Request Management is available at `/requests`, `/my-requests`, `/requests/new`, `/requests/:requestId`, and `/requests/:requestId/edit`. It uses the existing request-type, request, workflow-runtime, approval-progress, and approval-history APIs. Request types and dynamic fields are loaded from the backend; request types are not hardcoded in the frontend.
+
+The request UI supports:
+
+- Request type selection.
+- Dynamic text, textarea, number, date, select, multi-select, and checkbox fields.
+- Server-validated request creation and draft saving.
+- Server-paginated request listing and personal request history.
+- Draft and returned-request editing.
+- Submission and returned-request resubmission.
+- Request cancellation with a required reason.
+- Request details, status, dynamic values, approval progress, and activity history.
+
+The backend remains responsible for ownership, organization/department scope, dynamic-field validation, status transitions, workflow selection, approval-step creation, audit events, and notifications. The frontend does not implement approval decisions or claim-one behavior. Attachment metadata is displayed when present, but upload/download is not exposed because the current backend has no dedicated storage API.
+
+The request APIs used by the frontend (relative to `/api`) are:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /request-types` | List active request types available to the current session. |
+| `GET /request-types/:requestTypeId` | Load a dynamic request form definition. |
+| `GET /requests` | Server-paginated, scope-filtered request listing. |
+| `POST /requests` | Create a draft request. |
+| `GET /requests/:requestId` | Load an authorized request. |
+| `PATCH /requests/:requestId` | Update a draft or returned request. |
+| `POST /requests/:requestId/submit` | Start the configured approval workflow. |
+| `POST /requests/:requestId/resubmit` | Start a new approval attempt for a returned request. |
+| `POST /requests/:requestId/cancel` | Cancel an eligible request. |
+| `GET /requests/:requestId/approval-progress` | Load current approval progress. |
+| `GET /requests/:requestId/approval-history` | Load request and approval timeline events. |
 
 ## User management (Phase 7)
 

@@ -62,6 +62,7 @@ describe('permission-aware navigation', () => {
       'audit-logs',
       'request-center',
       'request-list',
+      'my-requests',
     ]);
   });
 
