@@ -48,6 +48,26 @@ function renderUsersRoute(value: AuthContextValue) {
   );
 }
 
+function renderRolesRoute(value: AuthContextValue) {
+  return render(
+    <AuthContext.Provider value={value}>
+      <MemoryRouter initialEntries={['/roles']}>
+        <Routes>
+          <Route
+            path="/roles"
+            element={
+              <AuthorizationRoute itemId="roles">
+                <p>Roles workspace</p>
+              </AuthorizationRoute>
+            }
+          />
+          <Route path="/403" element={<ForbiddenPage />} />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>,
+  );
+}
+
 function tenantUser(
   departmentPermissions: Record<
     string,
@@ -108,5 +128,27 @@ describe('AuthorizationRoute', () => {
     expect(screen.getByText('Access not available')).toBeTruthy();
     expect(screen.queryByText('Users workspace')).toBeNull();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+  });
+
+  it('protects role-management navigation with organization-scoped roles.view', () => {
+    const user = tenantUser();
+    renderRolesRoute(
+      createContextValue({
+        ...user,
+        authorization: {
+          ...user.authorization,
+          organizationPermissions: ['roles.view'],
+        },
+      }),
+    );
+
+    expect(screen.getByText('Roles workspace')).toBeTruthy();
+  });
+
+  it('does not expose role-management navigation without roles.view', () => {
+    renderRolesRoute(createContextValue(tenantUser()));
+
+    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.queryByText('Roles workspace')).toBeNull();
   });
 });

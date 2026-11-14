@@ -22,6 +22,10 @@ import { UserCreatePage } from '@/features/users/pages/UserCreatePage';
 import { UserDetailsPage } from '@/features/users/pages/UserDetailsPage';
 import { UserEditPage } from '@/features/users/pages/UserEditPage';
 import { UserListPage } from '@/features/users/pages/UserListPage';
+import { RoleCreatePage } from '@/features/roles/pages/RoleCreatePage';
+import { RoleDetailsPage } from '@/features/roles/pages/RoleDetailsPage';
+import { RoleEditPage } from '@/features/roles/pages/RoleEditPage';
+import { RoleListPage } from '@/features/roles/pages/RoleListPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -156,10 +160,34 @@ const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'roles/new',
+        element: (
+          <AuthorizationRoute itemId="roles">
+            <RoleCreatePage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'roles/:roleId/edit',
+        element: (
+          <AuthorizationRoute itemId="roles">
+            <RoleEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'roles/:roleId',
+        element: (
+          <AuthorizationRoute itemId="roles">
+            <RoleDetailsPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
         path: 'roles',
         element: (
           <AuthorizationRoute itemId="roles">
-            <FeaturePlaceholderPage itemId="roles" />
+            <RoleListPage />
           </AuthorizationRoute>
         ),
       },

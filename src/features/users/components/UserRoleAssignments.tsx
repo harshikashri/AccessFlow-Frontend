@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Alert, Badge, Button, Card, Modal, Select } from '@/components/ui';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
@@ -11,6 +12,7 @@ import type {
   UserScopeType,
 } from '@/features/users/types/user.types';
 import { canAssignRoleAtScope } from '@/features/users/utils/user.utils';
+import { APP_ROUTES } from '@/routes/route.constants';
 
 interface UserRoleAssignmentsProps {
   actor: AuthenticatedUser;
@@ -120,7 +122,12 @@ export function UserRoleAssignments({
               {assignments.map((assignment) => (
                 <li key={assignment.id}>
                   <div className="user-role-list__details">
-                    <strong>{assignment.roleName ?? 'Role'}</strong>
+                    <Link
+                      className="user-role-list__role-link"
+                      to={`${APP_ROUTES.roles}/${assignment.roleId}`}
+                    >
+                      {assignment.roleName ?? 'Role'}
+                    </Link>
                     <span>
                       {assignment.scopeType === 'ORGANIZATION'
                         ? 'Organization'
