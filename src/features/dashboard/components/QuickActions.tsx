@@ -34,10 +34,10 @@ function getDashboardActions(user: AuthenticatedUser): DashboardAction[] {
   if (can('users.view') && can('users.create')) {
     actions.push({ label: 'Add a user', path: APP_ROUTES.users, icon: 'users' });
   }
-  if (can('departments.view') && can('departments.create')) {
+  if (hasOrganizationPermission(user.authorization, 'departments.create')) {
     actions.push({
       label: 'Create department',
-      path: APP_ROUTES.departments,
+      path: APP_ROUTES.newDepartment,
       icon: 'departments',
     });
   }

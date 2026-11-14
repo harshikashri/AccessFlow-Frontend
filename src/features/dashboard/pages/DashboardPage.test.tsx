@@ -174,6 +174,50 @@ describe('DashboardPage', () => {
     );
   });
 
+  it('links authorized department-directory rows to department details', async () => {
+    const user: AuthenticatedUser = {
+      ...createTenantUser(),
+      authorization: {
+        platformPermissions: [],
+        organizationPermissions: ['dashboard.view', 'departments.view'],
+        departmentPermissions: {},
+      },
+    };
+    const widget = createWidget({
+      key: 'DEPARTMENT_OVERVIEW',
+      title: 'Department overview',
+      category: 'DEPARTMENTS',
+      scope: 'ORGANIZATION',
+      kpiProvider: null,
+      kpiStatus: 'DEFERRED',
+      analyticsProvider: 'DEPARTMENTS',
+      analyticsStatus: 'IMPLEMENTED',
+    });
+    dashboardServiceMock.getConfiguration.mockResolvedValue(createConfiguration(user, [widget]));
+    dashboardServiceMock.getSummary.mockResolvedValue(createSummary('DYNAMIC', [], [widget]));
+    dashboardServiceMock.getAnalytics.mockResolvedValue({
+      scope: 'ORGANIZATION',
+      departmentDirectory: {
+        total: 1,
+        active: 1,
+        inactive: 0,
+        departments: [
+          {
+            departmentId: '64b000000000000000000001',
+            departmentName: 'Engineering',
+            status: 'ACTIVE',
+          },
+        ],
+      },
+      dateRange,
+    });
+
+    renderDashboard(user);
+
+    const departmentLink = await screen.findByRole('link', { name: 'Engineering' });
+    expect(departmentLink.getAttribute('href')).toBe('/departments/64b000000000000000000001');
+  });
+
   it('renders platform KPIs and only requests platform analytics providers', async () => {
     const user: AuthenticatedUser = {
       ...createTenantUser(),

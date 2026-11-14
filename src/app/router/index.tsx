@@ -14,6 +14,10 @@ import { OrganizationCreatePage } from '@/features/organizations/pages/Organizat
 import { OrganizationDetailsPage } from '@/features/organizations/pages/OrganizationDetailsPage';
 import { OrganizationEditPage } from '@/features/organizations/pages/OrganizationEditPage';
 import { OrganizationListPage } from '@/features/organizations/pages/OrganizationListPage';
+import { DepartmentCreatePage } from '@/features/departments/pages/DepartmentCreatePage';
+import { DepartmentDetailsPage } from '@/features/departments/pages/DepartmentDetailsPage';
+import { DepartmentEditPage } from '@/features/departments/pages/DepartmentEditPage';
+import { DepartmentListPage } from '@/features/departments/pages/DepartmentListPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -88,10 +92,30 @@ const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'departments/new',
+        element: <DepartmentCreatePage />,
+      },
+      {
+        path: 'departments/:departmentId/edit',
+        element: (
+          <AuthorizationRoute itemId="departments">
+            <DepartmentEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'departments/:departmentId',
+        element: (
+          <AuthorizationRoute itemId="departments">
+            <DepartmentDetailsPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
         path: 'departments',
         element: (
           <AuthorizationRoute itemId="departments">
-            <FeaturePlaceholderPage itemId="departments" />
+            <DepartmentListPage />
           </AuthorizationRoute>
         ),
       },

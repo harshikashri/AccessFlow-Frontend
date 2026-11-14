@@ -7,6 +7,7 @@ export const APP_ROUTES = Object.freeze({
   setPassword: '/set-password',
   organizations: '/organizations',
   departments: '/departments',
+  newDepartment: '/departments/new',
   users: '/users',
   roles: '/roles',
   workflows: '/workflows',
