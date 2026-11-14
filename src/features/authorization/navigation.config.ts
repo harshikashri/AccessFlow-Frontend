@@ -127,7 +127,7 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         id: 'roles',
         label: 'Roles and permissions',
         icon: 'roles',
-        description: 'Role management is a planned feature; no role data is loaded here.',
+        description: 'Manage organization roles, permissions, and scoped user assignments.',
         section: 'Organization',
         path: APP_ROUTES.roles,
         requirement: permissionRequirement('roles.view', 'organization'),

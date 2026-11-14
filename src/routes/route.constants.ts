@@ -11,6 +11,7 @@ export const APP_ROUTES = Object.freeze({
   users: '/users',
   newUser: '/users/new',
   roles: '/roles',
+  newRole: '/roles/new',
   workflows: '/workflows',
   requests: '/requests',
   newRequest: '/requests/new',

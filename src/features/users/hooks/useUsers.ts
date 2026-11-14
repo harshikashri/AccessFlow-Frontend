@@ -15,6 +15,7 @@ import type {
 } from '@/features/users/types/user.types';
 import type { DepartmentStatus } from '@/features/departments/types/department.types';
 import { userQueryKeys } from './user-query-keys';
+import { roleQueryKeys } from '@/features/roles/hooks/role-query-keys';
 
 async function invalidateUserWorkspace(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -24,6 +25,9 @@ async function invalidateUserWorkspace(
   await Promise.all([
     queryClient.invalidateQueries({
       queryKey: userQueryKeys.workspace(actorId, organizationId),
+    }),
+    queryClient.invalidateQueries({
+      queryKey: roleQueryKeys.workspace(actorId, organizationId),
     }),
     queryClient.invalidateQueries({
       queryKey: departmentQueryKeys.user(actorId, organizationId),

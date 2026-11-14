@@ -99,11 +99,13 @@ export interface UserRole {
   name: string;
   description: string;
   roleType: UserRoleType;
-  rolePurpose: string;
+  rolePurpose: 'GENERAL' | 'FINANCE_APPROVER';
   permissions: PermissionId[];
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
+  createdBy?: string | null;
+  assignmentCount?: number;
 }
 
 export interface UserRoleAssignment {
