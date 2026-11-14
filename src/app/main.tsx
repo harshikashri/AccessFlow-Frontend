@@ -8,6 +8,7 @@ import '@/styles/globals.css';
 import '@/styles/components.css';
 import '@/styles/application.css';
 import '@/styles/auth.css';
+import '@/styles/users.css';
 
 const rootElement = document.getElementById('root');
 

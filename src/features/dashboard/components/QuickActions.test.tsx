@@ -48,4 +48,16 @@ describe('QuickActions', () => {
 
     expect(screen.queryByRole('link', { name: /Create department/ })).toBeNull();
   });
+
+  it('links organization user creators directly to the user creation form', () => {
+    render(
+      <MemoryRouter>
+        <QuickActions user={createUser(['users.create'])} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: /Add a user/ }).getAttribute('href')).toBe(
+      '/users/new',
+    );
+  });
 });

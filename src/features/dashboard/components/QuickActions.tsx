@@ -31,8 +31,8 @@ function getDashboardActions(user: AuthenticatedUser): DashboardAction[] {
   if (can('requests.approve')) {
     actions.push({ label: 'Open approvals', path: APP_ROUTES.approvals, icon: 'approvals' });
   }
-  if (can('users.view') && can('users.create')) {
-    actions.push({ label: 'Add a user', path: APP_ROUTES.users, icon: 'users' });
+  if (hasOrganizationPermission(user.authorization, 'users.create')) {
+    actions.push({ label: 'Add a user', path: APP_ROUTES.newUser, icon: 'users' });
   }
   if (hasOrganizationPermission(user.authorization, 'departments.create')) {
     actions.push({

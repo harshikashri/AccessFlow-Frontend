@@ -65,6 +65,16 @@ describe('permission-aware navigation', () => {
     ]);
   });
 
+  it('lets organization creators navigate directly to user creation without directory access', () => {
+    const user = createUser({
+      platformPermissions: [],
+      organizationPermissions: ['users.create'],
+      departmentPermissions: {},
+    });
+
+    expect(getVisibleItemIds(user, 'available')).toEqual(['users-create']);
+  });
+
   it('hides navigation until authorization is available and for an empty profile', () => {
     const emptyUser = createUser({
       platformPermissions: [],
