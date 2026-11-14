@@ -26,6 +26,10 @@ import { RoleCreatePage } from '@/features/roles/pages/RoleCreatePage';
 import { RoleDetailsPage } from '@/features/roles/pages/RoleDetailsPage';
 import { RoleEditPage } from '@/features/roles/pages/RoleEditPage';
 import { RoleListPage } from '@/features/roles/pages/RoleListPage';
+import { RequestCreatePage } from '@/features/requests/pages/RequestCreatePage';
+import { RequestDetailsPage } from '@/features/requests/pages/RequestDetailsPage';
+import { RequestEditPage } from '@/features/requests/pages/RequestEditPage';
+import { RequestListPage } from '@/features/requests/pages/RequestListPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -203,7 +207,15 @@ const routes: RouteObject[] = [
         path: 'requests',
         element: (
           <AuthorizationRoute itemId="request-list">
-            <FeaturePlaceholderPage itemId="request-list" />
+            <RequestListPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'my-requests',
+        element: (
+          <AuthorizationRoute itemId="request-list">
+            <RequestListPage mine />
           </AuthorizationRoute>
         ),
       },
@@ -211,7 +223,23 @@ const routes: RouteObject[] = [
         path: 'requests/new',
         element: (
           <AuthorizationRoute itemId="new-request">
-            <FeaturePlaceholderPage itemId="new-request" />
+            <RequestCreatePage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'requests/:requestId/edit',
+        element: (
+          <AuthorizationRoute itemId="request-list">
+            <RequestEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'requests/:requestId',
+        element: (
+          <AuthorizationRoute itemId="request-list">
+            <RequestDetailsPage />
           </AuthorizationRoute>
         ),
       },

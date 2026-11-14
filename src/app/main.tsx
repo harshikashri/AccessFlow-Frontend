@@ -10,6 +10,7 @@ import '@/styles/application.css';
 import '@/styles/auth.css';
 import '@/styles/users.css';
 import '@/styles/roles.css';
+import '@/styles/requests.css';
 
 const rootElement = document.getElementById('root');
 
