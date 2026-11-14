@@ -24,6 +24,7 @@ The AccessFlow frontend is a standalone React application for the Enterprise Acc
 - `src/features/dashboard`: typed dashboard API integration, permission-aware widgets, filters, charts, activity, and dashboard states.
 - `src/features/departments`: tenant-scoped department directory, department forms and details, scoped status management, and manager assignment.
 - `src/features/organizations`: typed organization API integration, platform-only routes, server-paginated listing, organization forms, details, and status management.
+- `src/features/users`: tenant-scoped user directory, profile and membership lifecycle management, department transfers, and permission-scoped role assignment.
 - `src/layouts` and `src/routes`: shared workspace layout and routing primitives, including authenticated and permission-aware route guards.
 - `src/lib` and `src/services`: third-party client configuration and shared API infrastructure.
 - `src/stores`: reserved for genuinely global client-side state; server state belongs in TanStack Query.
@@ -35,7 +36,7 @@ Run `npm run dev` and open `/ui-showcase` to explore the reusable components and
 
 The UI foundation includes accessible buttons, form controls, cards, badges, dialogs, dropdowns, tabs, tooltips, tables, avatars, separators, skeletons, spinners, alerts, and toasts.
 
-The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, and tenant department management routes load API-backed data; users, roles, workflows, requests, approvals, and audit logs remain informational placeholders. Notifications are also a UI placeholder because no notification API is available.
+The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, tenant department management, and tenant user management routes load API-backed data. Roles, workflows, requests, approvals, and audit logs remain informational placeholders. Notifications are also a UI placeholder because no notification API is available.
 
 ## Prerequisites
 
@@ -122,6 +123,29 @@ The directory requests server-side pages and supports only backend-supported nam
 Deactivation retains department membership and manager references; it does not delete users or remove role assignments. The backend blocks editing and new member additions while inactive, and department-scoped permissions are not effective for inactive departments. The UI confirms the change and describes these effects. Details show members read-only; although the backend has member-add/remove endpoints, those actions are left to the User Management phase. No department activity read endpoint is implemented (the audit module has no read route), so department audit events are not fetched or represented as a department activity feed.
 
 Phase 5 Organization Details remains platform-only and cannot safely embed tenant department data: its Super Admin session has no organization context, and there is no platform organization-switching or organization-scoped department-list API. Department links are available through the tenant navigation and details routes instead. Dashboard Quick Actions now link authorized organization-wide creators directly to the dedicated department creation route.
+
+## User management (Phase 7)
+
+User Management is available only in the authenticated tenant organization at `/users`, `/users/new`, `/users/:userId`, and `/users/:userId/edit`. It uses the shared API client and TanStack Query, validates backend response shapes at runtime, and uses the authorization scopes returned by `/auth/me`. The directory and detail pages require effective `users.view`; create requires organization-wide `users.create`; profile edits and password instructions require `users.edit`; membership lifecycle actions require `users.deactivate`. Create-only users have a dedicated navigation and Quick Actions link to `/users/new`. The backend remains authoritative for tenant boundaries and each mutation.
+
+The frontend supports these existing endpoints (relative to `/api`):
+
+| Method and path | Supported behavior |
+| --- | --- |
+| `GET /users` | Server pagination, name/email search, global account-status filter, department filter (`departmentId=null` means unassigned), role filter, and supported name/email/status/date sorting. Results are filtered by effective backend organization and department scope. |
+| `POST /users` | Creates `{ name, email, departmentId?, roleAssignments? }` in the active organization and sends initial password setup instructions. No password or organization selector is sent. |
+| `GET /users/:userId` | Returns the safe profile, current organization membership, department summary, and active role summaries. |
+| `PATCH /users/:userId` | Changes only `{ name?, email? }`. Email remains globally unique; changing it revokes all of the user's sessions across organizations. |
+| `PATCH /users/:userId/department` | Transfers only the current organization's membership with `{ departmentId: string | null }`. The target must be an active in-organization department and source/target scopes are checked. Department Manager role assignments are not implicitly changed. |
+| `PATCH /users/:userId/activate` and `/deactivate` | Activate or deactivate this organization's membership only. The backend protects self/last-admin cases and revokes sessions for this organization on deactivation. |
+| `POST /users/:userId/password-reset` | Sends password setup or reset instructions; the API does not return the token. The frontend displays only a success/failure notice. |
+| `GET /roles` and `GET /roles/users/:userId` | Discover active role options and assignment records for the role-management panel. Role endpoints additionally require Organization Admin access; a permission grant alone may not make these endpoints available. |
+| `POST /roles/:roleId/assign` and `DELETE /roles/:roleId/assign/:userId` | Add or remove one role assignment at its explicit organization or department scope. The backend validates scope, role compatibility, active account/membership, and the last-admin constraint. |
+| `GET /departments` | Reused for active department choices and directory filters; the authenticated organization context is supplied by the session, not a browser-selected tenant. |
+
+Global account status and organization-membership status are deliberately displayed separately. A newly created account needs to complete password setup; the membership activate/deactivate actions do not change global account state. If user creation returns `USER_CREATED_EMAIL_FAILED`, the user record has already committed; the page surfaces the returned user ID, disables another create attempt, and tells the operator not to retry blindly.
+
+The current APIs do not support Super Admin/platform user management, tenant selection, cross-organization filtering, global account activation/deactivation, a user-specific audit/activity read feed, last-login timestamps, employee/contact fields, or an atomic role-assignment scope update. The detail endpoint also omits `passwordSetupRequired`, so the UI does not infer setup state from an inactive global account. Role reassignment is not implemented as an implicit remove-then-add sequence. These capabilities require backend API changes and are not fabricated by the frontend.
 
 ## Dashboard API plan and scope
 

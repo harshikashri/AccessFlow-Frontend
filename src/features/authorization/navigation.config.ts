@@ -115,6 +115,15 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         requirement: permissionRequirement('users.view', 'organization-or-department'),
       },
       {
+        id: 'users-create',
+        label: 'Add a user',
+        icon: 'create',
+        description: 'Invite a user to your active organization.',
+        section: 'Organization',
+        path: APP_ROUTES.newUser,
+        requirement: permissionRequirement('users.create', 'organization'),
+      },
+      {
         id: 'roles',
         label: 'Roles and permissions',
         icon: 'roles',

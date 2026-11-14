@@ -9,6 +9,7 @@ export const APP_ROUTES = Object.freeze({
   departments: '/departments',
   newDepartment: '/departments/new',
   users: '/users',
+  newUser: '/users/new',
   roles: '/roles',
   workflows: '/workflows',
   requests: '/requests',

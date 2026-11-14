@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import {
   Badge,
   Card,
@@ -9,9 +10,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui';
+import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
 import type { DepartmentUser } from '@/features/departments/types/department.types';
+import { canViewUserScope } from '@/features/users/utils/user.utils';
 
-export function DepartmentMembers({ members }: { members: DepartmentUser[] }) {
+export function DepartmentMembers({
+  members,
+  actor,
+}: {
+  members: DepartmentUser[];
+  actor: AuthenticatedUser;
+}) {
   return (
     <Card
       title="Department members"
@@ -32,7 +41,13 @@ export function DepartmentMembers({ members }: { members: DepartmentUser[] }) {
           ) : (
             members.map((member) => (
               <TableRow key={member.id}>
-                <TableCell>{member.name}</TableCell>
+                <TableCell>
+                  {canViewUserScope(actor, member.departmentId) ? (
+                    <Link to={`/users/${member.id}`}>{member.name}</Link>
+                  ) : (
+                    member.name
+                  )}
+                </TableCell>
                 <TableCell>{member.email}</TableCell>
                 <TableCell>
                   <Badge variant={member.accountStatus === 'ACTIVE' ? 'success' : 'warning'}>

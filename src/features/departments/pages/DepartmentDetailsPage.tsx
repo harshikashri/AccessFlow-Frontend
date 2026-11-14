@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import { hasOrganizationPermission } from '@/features/authorization/permissions';
+import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
 import { AssignManagerDialog } from '@/features/departments/components/AssignManagerDialog';
 import { DepartmentManagerCard } from '@/features/departments/components/DepartmentManagerCard';
 import { DepartmentMembers } from '@/features/departments/components/DepartmentMembers';
@@ -34,12 +35,14 @@ function DepartmentDetailsContent({
   departmentId,
   canEdit,
   canManageManagers,
+  actor,
 }: {
   userId: string;
   organizationId: string;
   departmentId: string;
   canEdit: boolean;
   canManageManagers: boolean;
+  actor: AuthenticatedUser;
 }) {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -176,7 +179,7 @@ function DepartmentDetailsContent({
           }}
         />
       </div>
-      <DepartmentMembers members={members} />
+      <DepartmentMembers members={members} actor={actor} />
       <Alert variant="information" title="Activity history">
         Department audit events are recorded by the backend, but there is no department activity
         read endpoint available to this workspace.
@@ -281,6 +284,7 @@ export function DepartmentDetailsPage() {
       departmentId={departmentId}
       canEdit={canEdit}
       canManageManagers={canManageManagers}
+      actor={user}
     />
   );
 }

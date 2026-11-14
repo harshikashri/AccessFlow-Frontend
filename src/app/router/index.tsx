@@ -18,6 +18,10 @@ import { DepartmentCreatePage } from '@/features/departments/pages/DepartmentCre
 import { DepartmentDetailsPage } from '@/features/departments/pages/DepartmentDetailsPage';
 import { DepartmentEditPage } from '@/features/departments/pages/DepartmentEditPage';
 import { DepartmentListPage } from '@/features/departments/pages/DepartmentListPage';
+import { UserCreatePage } from '@/features/users/pages/UserCreatePage';
+import { UserDetailsPage } from '@/features/users/pages/UserDetailsPage';
+import { UserEditPage } from '@/features/users/pages/UserEditPage';
+import { UserListPage } from '@/features/users/pages/UserListPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -120,10 +124,34 @@ const routes: RouteObject[] = [
         ),
       },
       {
+        path: 'users/new',
+        element: (
+          <AuthorizationRoute itemId="users-create">
+            <UserCreatePage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'users/:userId/edit',
+        element: (
+          <AuthorizationRoute itemId="users">
+            <UserEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'users/:userId',
+        element: (
+          <AuthorizationRoute itemId="users">
+            <UserDetailsPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
         path: 'users',
         element: (
           <AuthorizationRoute itemId="users">
-            <FeaturePlaceholderPage itemId="users" />
+            <UserListPage />
           </AuthorizationRoute>
         ),
       },
