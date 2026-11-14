@@ -22,6 +22,7 @@ The AccessFlow frontend is a standalone React application for the Enterprise Acc
 - `src/features/auth`: authentication API services, in-memory access-token handling, session context, protected routes, and sign-in/password pages.
 - `src/features/authorization`: validated permission types, scope-aware permission checks, and centralized navigation requirements.
 - `src/features/dashboard`: typed dashboard API integration, permission-aware widgets, filters, charts, activity, and dashboard states.
+- `src/features/organizations`: typed organization API integration, platform-only routes, server-paginated listing, organization forms, details, and status management.
 - `src/layouts` and `src/routes`: shared workspace layout and routing primitives, including authenticated and permission-aware route guards.
 - `src/lib` and `src/services`: third-party client configuration and shared API infrastructure.
 - `src/stores`: reserved for genuinely global client-side state; server state belongs in TanStack Query.
@@ -33,7 +34,7 @@ Run `npm run dev` and open `/ui-showcase` to explore the reusable components and
 
 The UI foundation includes accessible buttons, form controls, cards, badges, dialogs, dropdowns, tabs, tooltips, tables, avatars, separators, skeletons, spinners, alerts, and toasts.
 
-The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboard routes load API-backed data; organizations, departments, users, roles, workflows, requests, approvals, and audit logs remain informational placeholders. Notifications are also a UI placeholder because no notification API is available.
+The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards and Super Admin organization management routes load API-backed data; departments, users, roles, workflows, requests, approvals, and audit logs remain informational placeholders. Notifications are also a UI placeholder because no notification API is available.
 
 ## Prerequisites
 
@@ -74,20 +75,41 @@ Login and session restoration call `/auth/me` to obtain the authoritative curren
 
 Role and workflow endpoints have additional backend assignment rules not represented in the `/auth/me` contract. Their current pages are placeholders and make no feature API calls, so they do not imply those additional backend capabilities are available in the UI.
 
+## Organization management (Phase 5)
+
+Organization management is available at `/organizations`, with separate creation (`/organizations/new`), detail (`/organizations/:organizationId`), and edit (`/organizations/:organizationId/edit`) pages. Every route is protected by the existing platform-session navigation guard and checks the authenticated `platformRole` against `SUPER_ADMIN`, matching the backend's `requireSuperAdmin` middleware. The backend does not define organization-management permission IDs; tenant administrators and custom tenant roles are not granted access by role name or by unrelated permissions.
+
+The frontend uses the shared Axios client, TanStack Query, and typed runtime-validated responses for these existing endpoints (relative to the `/api` base URL):
+
+| Method and path                                   | Supported behavior                                                                                                                                                                                                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /organizations`                              | Server-paginated list. Supports `page`, `limit` (1–100), name-only `search`, `status` (`ACTIVE`/`INACTIVE`), `sortBy` (`name`, `createdAt`, `updatedAt`, `status`), and `sortOrder` (`asc`/`desc`). Defaults are page 1, limit 10, created date descending. |
+| `POST /organizations`                             | Creates an organization and required initial administrator. Body: `{ name, admin: { name, email, password } }`.                                                                                                                                             |
+| `GET /organizations/:organizationId`              | Returns the public organization profile and `memberCount`, `activeMemberCount`, and `departmentCount`.                                                                                                                                                      |
+| `PATCH /organizations/:organizationId`            | Updates only `{ name }`.                                                                                                                                                                                                                                    |
+| `PATCH /organizations/:organizationId/activate`   | Activates the organization.                                                                                                                                                                                                                                 |
+| `PATCH /organizations/:organizationId/deactivate` | Deactivates the organization.                                                                                                                                                                                                                               |
+
+Organization names and initial administrator names must be 2–200 characters. The administrator email follows the backend's email pattern; the password must contain at least 10 characters, a lowercase letter, an uppercase letter, a number, and a special character. The backend creates an active organization, initial admin membership and role, built-in organization roles, default request types, and an approval workflow in a transaction. The UI collects only fields accepted by the create/update validators and explains that status deactivation prevents organization members from signing in; it does not delete data.
+
+List summary cards use the organization list endpoint's server-returned totals with `limit=1` for the overall, active, and inactive counts. The directory itself always uses server-side pagination and supports debounced name search, status filtering, and the backend's supported sort fields. Organization details display only fields and counts returned by the detail endpoint. The create, edit, and status mutations invalidate organization and dashboard caches for the current user.
+
+The backend has no organization delete endpoint, organization code/contact fields, organization-scoped user or department listing endpoints, or organization activity/audit read endpoint. Organization creation, updates, and status changes are audit-logged by the backend, but those records cannot be displayed per organization through the current APIs. Detail pages state these limitations instead of fabricating data. Organization analytics remain available on the platform dashboard, whose organization rows link to the corresponding detail page.
+
 ## Dashboard API plan and scope
 
 The dashboard uses the existing authenticated Axios client and TanStack Query. All dashboard endpoints are `GET /dashboard/...` relative to `VITE_API_BASE_URL`, which includes the backend `/api` prefix. Responses use the standard `{ success, message, data }` envelope; dashboard failures use the shared `{ success: false, message, code, details? }` API error shape.
 
-| Endpoint | Data used |
-| --- | --- |
-| `GET /dashboard/config` | Server-filtered `PLATFORM` or `DYNAMIC` dashboard type, visible widget registry, and supported date-range options. Query parameters are not accepted. |
-| `GET /dashboard/summary` | Effective KPI array, deferred widget metadata, and resolved date range. Accepts `range`, `fromDate`, `toDate`. |
-| `GET /dashboard/organization-analytics` | Platform organization registration/status trends and organization comparisons/overview. |
-| `GET /dashboard/user-analytics` | Platform or tenant user totals, registration trends, and platform organization/role or tenant department breakdowns. |
-| `GET /dashboard/request-analytics` | Platform or authorized tenant request trends, status and type distributions, period comparison, and platform organization comparison. |
-| `GET /dashboard/approval-analytics` | Authorized tenant approval workload, status/stage/decision summaries, and returned approval-duration/SLA metrics. Not available to Super Admin. |
-| `GET /dashboard/department-analytics` | Platform department analytics or the tenant department statistics/directory variant authorized by the caller's permissions. |
-| `GET /dashboard/recent-activity` | Scope-filtered platform or tenant activity with pagination. Accepts date-range fields plus `page` and `limit`; it has no activity-category filter. |
+| Endpoint                                | Data used                                                                                                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /dashboard/config`                 | Server-filtered `PLATFORM` or `DYNAMIC` dashboard type, visible widget registry, and supported date-range options. Query parameters are not accepted. |
+| `GET /dashboard/summary`                | Effective KPI array, deferred widget metadata, and resolved date range. Accepts `range`, `fromDate`, `toDate`.                                        |
+| `GET /dashboard/organization-analytics` | Platform organization registration/status trends and organization comparisons/overview.                                                               |
+| `GET /dashboard/user-analytics`         | Platform or tenant user totals, registration trends, and platform organization/role or tenant department breakdowns.                                  |
+| `GET /dashboard/request-analytics`      | Platform or authorized tenant request trends, status and type distributions, period comparison, and platform organization comparison.                 |
+| `GET /dashboard/approval-analytics`     | Authorized tenant approval workload, status/stage/decision summaries, and returned approval-duration/SLA metrics. Not available to Super Admin.       |
+| `GET /dashboard/department-analytics`   | Platform department analytics or the tenant department statistics/directory variant authorized by the caller's permissions.                           |
+| `GET /dashboard/recent-activity`        | Scope-filtered platform or tenant activity with pagination. Accepts date-range fields plus `page` and `limit`; it has no activity-category filter.    |
 
 The backend widget configuration is the source of truth for visible dashboard content. Tenant widgets map as follows: `REQUEST_SUMMARY` → request KPIs/analytics; `APPROVAL_SUMMARY` and `APPROVAL_ACTIVITY` → approval KPIs/analytics; `USER_STATISTICS` → user KPIs/analytics; `DEPARTMENT_OVERVIEW` → department KPIs/analytics; `ROLE_OVERVIEW` → role KPIs (role analytics is deferred); `AUDIT_ACTIVITY` → recent activity (its KPI provider is deferred). `REQUEST_CREATE` is a deferred data widget and may only link to the existing request placeholder when `requests.create` is effective.
 
