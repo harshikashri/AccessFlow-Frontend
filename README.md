@@ -157,6 +157,33 @@ The request APIs used by the frontend (relative to `/api`) are:
 | `GET /requests/:requestId/approval-progress` | Load current approval progress. |
 | `GET /requests/:requestId/approval-history` | Load request and approval timeline events. |
 
+## Approval management (Phase 10)
+
+Approval Management is available at `/approvals`, `/approvals/:approvalStepId`, and `/approvals/delegation`. It uses the existing approval runtime and delegation APIs; approval authorization, claim ownership, workflow advancement, scope checks, and audit events remain backend responsibilities.
+
+The approval UI supports:
+
+- Filtered and paginated approval inbox views for pending, available, claimed, completed, and relevant tasks.
+- Approval request details, dynamic request information, SLA deadline display, and approval history.
+- Claim-one, approve, reject, and return-for-correction actions with the backend-required comment rules.
+- Creating and revoking organization- or department-scoped delegations.
+
+The current backend does not expose a release-claim endpoint or a dedicated eligible-delegate search endpoint. Delegation creation therefore accepts a delegate user ID and the backend validates eligibility. Dates are entered as ISO-8601 values.
+
+The approval APIs used by the frontend (relative to `/api`) are:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /approvals/inbox` | Load the authorized approval inbox. |
+| `GET /approvals/:approvalStepId` | Load an authorized approval step and request details. |
+| `POST /approvals/:approvalStepId/claim` | Atomically claim a claim-one approval. |
+| `POST /approvals/:approvalStepId/approve` | Approve the current stage. |
+| `POST /approvals/:approvalStepId/reject` | Reject the current stage with a required comment. |
+| `POST /approvals/:approvalStepId/return` | Return the request for correction with a required reason. |
+| `GET /approval-delegations` | List the current user's delegations. |
+| `POST /approval-delegations` | Create a backend-validated delegation. |
+| `POST /approval-delegations/:delegationId/revoke` | Revoke a delegation. |
+
 ## User management (Phase 7)
 
 User Management is available only in the authenticated tenant organization at `/users`, `/users/new`, `/users/:userId`, and `/users/:userId/edit`. It uses the shared API client and TanStack Query, validates backend response shapes at runtime, and uses the authorization scopes returned by `/auth/me`. The directory and detail pages require effective `users.view`; create requires organization-wide `users.create`; profile edits and password instructions require `users.edit`; membership lifecycle actions require `users.deactivate`. Create-only users have a dedicated navigation and Quick Actions link to `/users/new`. The backend remains authoritative for tenant boundaries and each mutation.

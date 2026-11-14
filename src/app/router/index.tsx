@@ -30,6 +30,9 @@ import { RequestCreatePage } from '@/features/requests/pages/RequestCreatePage';
 import { RequestDetailsPage } from '@/features/requests/pages/RequestDetailsPage';
 import { RequestEditPage } from '@/features/requests/pages/RequestEditPage';
 import { RequestListPage } from '@/features/requests/pages/RequestListPage';
+import { ApprovalDetailsPage } from '@/features/approvals/pages/ApprovalDetailsPage';
+import { ApprovalInboxPage } from '@/features/approvals/pages/ApprovalInboxPage';
+import { DelegationPage } from '@/features/approvals/pages/DelegationPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -247,7 +250,23 @@ const routes: RouteObject[] = [
         path: 'approvals',
         element: (
           <AuthorizationRoute itemId="approvals">
-            <FeaturePlaceholderPage itemId="approvals" />
+            <ApprovalInboxPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'approvals/delegation',
+        element: (
+          <AuthorizationRoute itemId="approvals">
+            <DelegationPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'approvals/:approvalStepId',
+        element: (
+          <AuthorizationRoute itemId="approvals">
+            <ApprovalDetailsPage />
           </AuthorizationRoute>
         ),
       },

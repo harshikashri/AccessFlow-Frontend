@@ -1,0 +1,153 @@
+.approval-page__header-actions,
+.approval-actions,
+.approval-pagination,
+.approval-pagination > div,
+.approval-delegation-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.approval-breadcrumb {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.approval-breadcrumb a,
+.approval-table__link {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.approval-filters,
+.approval-delegation-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.approval-table__link {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.approval-table__link span,
+.approval-claim-note,
+.approval-history span,
+.approval-delegation-item span {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.approval-status {
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.approval-status--active,
+.approval-status--claimed {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.approval-status--approved {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.approval-status--rejected {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.approval-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.approval-detail-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.approval-detail-list > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.8fr) 1.2fr;
+  gap: 1rem;
+}
+
+.approval-detail-list dt {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.approval-detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.approval-actions {
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.approval-history {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.approval-history li {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.approval-pagination {
+  justify-content: space-between;
+  margin-top: 1.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.approval-delegation-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.approval-delegation-item {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 0;
+}
+
+.approval-delegation-item > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.approval-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 760px) {
+  .approval-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .approval-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
