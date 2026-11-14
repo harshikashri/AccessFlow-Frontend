@@ -17,6 +17,7 @@ export const APP_ROUTES = Object.freeze({
   myRequests: '/my-requests',
   newRequest: '/requests/new',
   approvals: '/approvals',
+  approvalDelegation: '/approvals/delegation',
   auditLogs: '/audit-logs',
   profile: '/profile',
   settings: '/settings',
