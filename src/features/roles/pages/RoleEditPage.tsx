@@ -21,6 +21,7 @@ import type { PermissionId } from '@/features/authorization/permission-catalog';
 import {
   arePermissionsEqual,
   canEditRolePermissions,
+  getRoleSupportedScopes,
   isBuiltInRole,
   isRoleId,
 } from '@/features/roles/utils/role.utils';
@@ -124,6 +125,14 @@ export function RoleEditPage() {
     if (!builtIn && values.rolePurpose !== currentRole.rolePurpose) {
       payload.rolePurpose = values.rolePurpose;
     }
+    const currentScopes = getRoleSupportedScopes(currentRole);
+    if (
+      !builtIn &&
+      (values.assignmentScopes.length !== currentScopes.length ||
+        values.assignmentScopes.some((scope) => !currentScopes.includes(scope)))
+    ) {
+      payload.assignmentScopes = values.assignmentScopes;
+    }
     if (Object.keys(payload).length === 0) {
       showToast({ title: 'No role detail changes', description: 'Nothing needed to be saved.' });
       return;
@@ -192,8 +201,12 @@ export function RoleEditPage() {
             name: role.name,
             description: role.description,
             rolePurpose: role.rolePurpose,
+            assignmentScopes: getRoleSupportedScopes(role),
           }}
           isBuiltIn={builtIn}
+          isLegacyCustomRoleUnconfigured={
+            role.roleType === 'CUSTOM' && getRoleSupportedScopes(role).length === 0
+          }
           isSaving={updateRole.isPending}
           onCancel={() => navigate(`${APP_ROUTES.roles}/${role.id}`)}
           onSubmit={submitRoleDetails}

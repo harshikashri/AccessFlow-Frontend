@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -19,25 +19,19 @@ import {
 import { OrganizationSummaryCards } from '@/features/organizations/components/OrganizationSummaryCards';
 import { OrganizationTable } from '@/features/organizations/components/OrganizationTable';
 import { APP_ROUTES } from '@/routes/route.constants';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
 function OrganizationListContent({ userId }: { userId: string }) {
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<OrganizationStatus | ''>('');
   const [sortBy, setSortBy] = useState<OrganizationSortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<OrganizationSortOrder>('desc');
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const params = useMemo<OrganizationListParams>(
     () => ({
@@ -57,7 +51,6 @@ function OrganizationListContent({ userId }: { userId: string }) {
 
   function clearFilters() {
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setSortBy('createdAt');
     setSortOrder('desc');
@@ -101,7 +94,10 @@ function OrganizationListContent({ userId }: { userId: string }) {
             name="search"
             placeholder="Search by organization name"
             value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            onChange={(event) => {
+              setSearchInput(event.target.value);
+              setPage(1);
+            }}
           />
           <Select
             label="Status"

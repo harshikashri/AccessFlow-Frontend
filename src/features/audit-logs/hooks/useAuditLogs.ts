@@ -6,7 +6,7 @@ import type { AuditListParams } from '../types/audit-log.types';
 export const useAuditLogs = (params: AuditListParams, enabled: boolean) =>
   useQuery({
     queryKey: auditLogQueryKeys.list(params),
-    queryFn: () => auditLogService.list(params),
+    queryFn: ({ signal }) => auditLogService.list(params, signal),
     enabled,
     staleTime: 15_000,
   });

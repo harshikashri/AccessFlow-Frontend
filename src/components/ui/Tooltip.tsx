@@ -7,6 +7,7 @@ import {
   useState,
   type ReactElement,
 } from 'react';
+import { useThrottledCallback } from '@/hooks/useThrottledCallback';
 
 interface TooltipTriggerProps {
   'aria-describedby'?: string;
@@ -41,12 +42,13 @@ export function Tooltip({ label, children, placement = 'top' }: TooltipProps) {
     );
     setHorizontalOffset(left - rootRect.left);
   }, []);
+  const handleResize = useThrottledCallback(positionWithinViewport, 100);
 
   useLayoutEffect(() => {
     positionWithinViewport();
-    window.addEventListener('resize', positionWithinViewport);
-    return () => window.removeEventListener('resize', positionWithinViewport);
-  }, [positionWithinViewport]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize, positionWithinViewport]);
 
   return (
     <span

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -15,6 +15,7 @@ import type {
   DepartmentStatus,
 } from '@/features/departments/types/department.types';
 import { APP_ROUTES } from '@/routes/route.constants';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -22,19 +23,12 @@ export function DepartmentListPage() {
   const { user, authorizationStatus } = useAuth();
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<DepartmentStatus | ''>('');
   const [sortBy, setSortBy] = useState<DepartmentSortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<DepartmentSortOrder>('desc');
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const params = useMemo<DepartmentListParams>(
     () => ({
@@ -73,7 +67,6 @@ export function DepartmentListPage() {
 
   function clearFilters() {
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setSortBy('createdAt');
     setSortOrder('desc');
@@ -122,7 +115,10 @@ export function DepartmentListPage() {
             name="search"
             placeholder="Search by department name"
             value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            onChange={(event) => {
+              setSearchInput(event.target.value);
+              setPage(1);
+            }}
           />
           <Select
             label="Status"

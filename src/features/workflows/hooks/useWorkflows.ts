@@ -11,7 +11,7 @@ export function useWorkflowList(
 ) {
   return useQuery({
     queryKey: workflowQueryKeys.list(userId, organizationId, params),
-    queryFn: () => workflowService.list(params),
+    queryFn: ({ signal }) => workflowService.list(params, signal),
     enabled: enabled && Boolean(userId && organizationId),
   });
 }

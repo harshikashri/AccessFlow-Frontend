@@ -116,9 +116,10 @@ export const requestService = {
     return data;
   },
 
-  async list(params: RequestListParams): Promise<RequestListResponse> {
+  async list(params: RequestListParams, signal?: AbortSignal): Promise<RequestListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/requests', {
       params: toParams(params),
+      ...(signal ? { signal } : {}),
     });
     const data = assertRecord(response);
     if (

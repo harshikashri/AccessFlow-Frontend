@@ -112,9 +112,10 @@ function toParams(params: WorkflowListParams): Record<string, string> {
 }
 
 export const workflowService = {
-  async list(params: WorkflowListParams): Promise<WorkflowListResponse> {
+  async list(params: WorkflowListParams, signal?: AbortSignal): Promise<WorkflowListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/approval-workflows', {
       params: toParams(params),
+      ...(signal ? { signal } : {}),
     });
     const data = getData(response);
     if (

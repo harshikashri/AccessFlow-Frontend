@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import {
   Button,
+  Checkbox,
   Table,
   TableBody,
   TableCell,
@@ -28,6 +29,12 @@ interface UserTableProps {
   canCreate: boolean;
   onClearFilters: () => void;
   onSetMembershipStatus: (user: UserProfile, status: 'ACTIVE' | 'INACTIVE') => void;
+  selection?: {
+    selectedIds: ReadonlySet<string>;
+    canSelectUser: (user: UserProfile) => boolean;
+    onToggle: (userId: string, selected: boolean) => void;
+    onSelectPage: (userIds: string[], selected: boolean) => void;
+  };
 }
 
 export function UserTable({
@@ -38,11 +45,35 @@ export function UserTable({
   canCreate,
   onClearFilters,
   onSetMembershipStatus,
+  selection,
 }: UserTableProps) {
+  const selectableUsers = selection ? users.filter(selection.canSelectUser) : [];
+  const selectedCount = selectableUsers.filter((user) =>
+    selection?.selectedIds.has(user.id),
+  ).length;
+  const allSelectableSelected =
+    selectableUsers.length > 0 && selectedCount === selectableUsers.length;
+
   return (
     <Table aria-label="Users">
       <TableHead>
         <TableRow>
+          {selection && (
+            <TableHeader scope="col">
+              <Checkbox
+                label="Select all users on this page"
+                checked={allSelectableSelected}
+                indeterminate={selectedCount > 0 && !allSelectableSelected}
+                disabled={selectableUsers.length === 0 || isLoading}
+                onChange={(event) =>
+                  selection.onSelectPage(
+                    selectableUsers.map((user) => user.id),
+                    event.target.checked,
+                  )
+                }
+              />
+            </TableHeader>
+          )}
           <TableHeader scope="col">User</TableHeader>
           <TableHeader scope="col">Account</TableHeader>
           <TableHeader scope="col">Organization membership</TableHeader>
@@ -53,9 +84,9 @@ export function UserTable({
       </TableHead>
       <TableBody>
         {isLoading ? (
-          <TableLoadingState columns={6} rows={5} />
+          <TableLoadingState columns={selection ? 7 : 6} rows={5} />
         ) : users.length === 0 ? (
-          <TableEmptyState colSpan={6}>
+          <TableEmptyState colSpan={selection ? 7 : 6}>
             <div className="user-table__empty">
               <span>
                 {hasFilters
@@ -78,6 +109,19 @@ export function UserTable({
             const canManageMembership = canManageUserMembership(actor, departmentId);
             return (
               <TableRow key={user.id}>
+                {selection && (
+                  <TableCell>
+                    {selection.canSelectUser(user) ? (
+                      <Checkbox
+                        label={`Select ${user.name}`}
+                        checked={selection.selectedIds.has(user.id)}
+                        onChange={(event) => selection.onToggle(user.id, event.target.checked)}
+                      />
+                    ) : (
+                      <span aria-label={`${user.name} cannot be selected`}>—</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="user-table__identity">
                     {canView ? (

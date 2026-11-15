@@ -112,9 +112,10 @@ function toListParams(params: OrganizationListParams): Record<string, string> {
 }
 
 export const organizationService = {
-  async list(params: OrganizationListParams): Promise<OrganizationListResponse> {
+  async list(params: OrganizationListParams, signal?: AbortSignal): Promise<OrganizationListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/organizations', {
       params: toListParams(params),
+      ...(signal ? { signal } : {}),
     });
     return assertApiData(response, isOrganizationListResponse);
   },

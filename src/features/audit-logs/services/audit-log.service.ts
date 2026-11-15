@@ -31,9 +31,10 @@ const paramsOf = (params: AuditListParams) =>
     Object.entries(params).filter(([, value]) => value !== undefined && value !== ''),
   );
 
-const list = async (params: AuditListParams): Promise<AuditListResponse> => {
+const list = async (params: AuditListParams, signal?: AbortSignal): Promise<AuditListResponse> => {
   const response = await apiClient.get<ApiEnvelope<unknown>>('/audit-logs', {
     params: paramsOf(params),
+    ...(signal ? { signal } : {}),
   });
   const data = dataOf(response);
   if (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Alert, Button, Card } from '@/components/ui';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -11,13 +11,15 @@ import { RequestFilters } from '../components/RequestFilters';
 import { RequestTable } from '../components/RequestTable';
 import { useRequestList, useRequestTypes } from '../hooks/useRequests';
 import type { RequestListParams, RequestStatus } from '../types/request.types';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
 export function RequestListPage({ mine = false }: { mine?: boolean }) {
   const { user, authorizationStatus } = useAuth();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<RequestStatus | ''>('');
   const [requestTypeId, setRequestTypeId] = useState('');
   const [page, setPage] = useState(1);
@@ -28,14 +30,6 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
   const canCreate = Boolean(
     user && hasPermission(user.authorization, 'requests.create', 'organization-or-department'),
   );
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const params = useMemo<RequestListParams>(
     () => ({
@@ -65,7 +59,6 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
 
   function clearFilters() {
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setRequestTypeId('');
     setPage(1);
@@ -119,7 +112,10 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
           status={status}
           requestTypeId={requestTypeId}
           requestTypes={typesQuery.data?.items ?? []}
-          onSearchChange={setSearchInput}
+          onSearchChange={(value) => {
+            setSearchInput(value);
+            setPage(1);
+          }}
           onStatusChange={(value) => {
             setStatus(value);
             setPage(1);

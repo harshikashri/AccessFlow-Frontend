@@ -80,7 +80,7 @@ describe('user utilities', () => {
     expect(getUserStatusLabel('INACTIVE')).toBe('Account inactive');
   });
 
-  it('only allows Finance Approver roles to be assigned at department scope', () => {
+  it('allows Finance Approver purpose roles at every configured scope', () => {
     const actor = createActor(['requests.approve'], {});
     const financeRole: UserRole = {
       id: otherDepartmentId,
@@ -89,13 +89,43 @@ describe('user utilities', () => {
       description: '',
       roleType: 'CUSTOM' as const,
       rolePurpose: 'FINANCE_APPROVER' as const,
+      assignmentScope: null,
+      assignmentScopes: ['ORGANIZATION', 'DEPARTMENT'],
       permissions: ['requests.approve'],
       status: 'ACTIVE',
       createdAt: '',
       updatedAt: '',
     };
 
-    expect(canAssignRoleAtScope(actor, financeRole, 'ORGANIZATION', null)).toBe(false);
+    expect(canAssignRoleAtScope(actor, financeRole, 'ORGANIZATION', null)).toBe(true);
     expect(canAssignRoleAtScope(actor, financeRole, 'DEPARTMENT', departmentId)).toBe(true);
+  });
+
+  it('only assigns configured custom roles at a supported scope', () => {
+    const actor = createActor(['users.view'], {});
+    const customRole: UserRole = {
+      id: otherDepartmentId,
+      organizationId: actor.organizationId ?? '',
+      name: 'Project Viewer',
+      description: '',
+      roleType: 'CUSTOM',
+      rolePurpose: 'GENERAL',
+      assignmentScope: 'DEPARTMENT',
+      permissions: ['users.view'],
+      status: 'ACTIVE',
+      createdAt: '',
+      updatedAt: '',
+    };
+
+    expect(canAssignRoleAtScope(actor, customRole, 'ORGANIZATION', null)).toBe(false);
+    expect(canAssignRoleAtScope(actor, customRole, 'DEPARTMENT', departmentId)).toBe(true);
+    expect(
+      canAssignRoleAtScope(
+        actor,
+        { ...customRole, assignmentScope: null },
+        'DEPARTMENT',
+        departmentId,
+      ),
+    ).toBe(false);
   });
 });

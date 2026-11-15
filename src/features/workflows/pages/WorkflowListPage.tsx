@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import {
   Alert,
@@ -24,6 +24,7 @@ import { APP_ROUTES } from '@/routes/route.constants';
 import { useWorkflowList } from '../hooks/useWorkflows';
 import { WorkflowStatusBadge } from '../components/WorkflowStatusBadge';
 import { formatWorkflowCondition } from '../components/workflow-form.utils';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -31,7 +32,8 @@ export function WorkflowListPage() {
   const { user, authorizationStatus } = useAuth();
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE' | ''>('');
   const [requestTypeId, setRequestTypeId] = useState('');
   const [page, setPage] = useState(1);
@@ -42,14 +44,6 @@ export function WorkflowListPage() {
   const canManage = Boolean(
     user && hasPermission(user.authorization, 'workflows.manage', 'organization'),
   );
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const params = useMemo(
     () => ({
@@ -78,7 +72,6 @@ export function WorkflowListPage() {
   const hasFilters = Boolean(searchInput.trim() || status || requestTypeId);
   const clearFilters = () => {
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setRequestTypeId('');
     setPage(1);
@@ -105,7 +98,10 @@ export function WorkflowListPage() {
             label="Search workflows"
             type="search"
             value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
+            onChange={(event) => {
+              setSearchInput(event.target.value);
+              setPage(1);
+            }}
             placeholder="Search by workflow name"
           />
           <Select

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { UserTable } from '@/features/users/components/UserTable';
@@ -31,6 +32,17 @@ const otherProfile: UserProfile = {
   email: 'morgan@example.com',
   accountStatus: 'ACTIVE',
   passwordSetupRequired: false,
+};
+const inactiveMembershipProfile: UserProfile = {
+  ...otherProfile,
+  id: '64b000000000000000000005',
+  name: 'Jordan User',
+  email: 'jordan@example.com',
+  membership: {
+    ...otherProfile.membership,
+    membershipId: '64b000000000000000000006',
+    status: 'INACTIVE',
+  },
 };
 
 const actor: AuthenticatedUser = {
@@ -70,5 +82,39 @@ describe('UserTable', () => {
       `/users/${userId}`,
     );
     expect(screen.getAllByRole('button', { name: 'Deactivate membership' })).toHaveLength(2);
+  });
+
+  it('selects eligible active and inactive memberships on the current page', async () => {
+    const user = userEvent.setup();
+    const onSelectPage = vi.fn();
+    render(
+      <MemoryRouter>
+        <UserTable
+          users={[profile, otherProfile, inactiveMembershipProfile]}
+          actor={actor}
+          isLoading={false}
+          hasFilters={false}
+          canCreate={false}
+          onClearFilters={vi.fn()}
+          onSetMembershipStatus={vi.fn()}
+          selection={{
+            selectedIds: new Set<string>(),
+            canSelectUser: (targetUser) => targetUser.id !== profile.id,
+            onToggle: vi.fn(),
+            onSelectPage,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('checkbox', { name: 'Select all users on this page' }));
+
+    expect(onSelectPage).toHaveBeenCalledWith(
+      [otherProfile.id, inactiveMembershipProfile.id],
+      true,
+    );
+    expect(screen.getByLabelText('Taylor User cannot be selected')).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Select Morgan User' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Select Jordan User' })).toBeTruthy();
   });
 });

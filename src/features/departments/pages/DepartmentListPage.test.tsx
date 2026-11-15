@@ -125,6 +125,7 @@ describe('DepartmentListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: 'Engineering', page: 1 }),
+        expect.any(AbortSignal),
       ),
     );
 
@@ -132,6 +133,7 @@ describe('DepartmentListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: 'ACTIVE', page: 1 }),
+        expect.any(AbortSignal),
       ),
     );
 
@@ -139,6 +141,7 @@ describe('DepartmentListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: 'Engineering', status: 'ACTIVE', page: 2 }),
+        expect.any(AbortSignal),
       ),
     );
   });

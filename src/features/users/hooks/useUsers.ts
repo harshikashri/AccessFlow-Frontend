@@ -4,6 +4,7 @@ import { departmentQueryKeys } from '@/features/departments/hooks/department-que
 import { userReferenceService } from '@/features/users/services/user-reference.service';
 import { userRoleService } from '@/features/users/services/user-role.service';
 import { userService } from '@/features/users/services/user.service';
+import { bulkUserService } from '@/features/users/services/bulk-user.service';
 import type {
   AssignUserDepartmentRequest,
   CreateUserRequest,
@@ -13,6 +14,7 @@ import type {
   UserStatus,
   UpdateUserRequest,
 } from '@/features/users/types/user.types';
+import type { BulkMembershipTargetStatus } from '@/features/users/types/bulk-user.types';
 import type { DepartmentStatus } from '@/features/departments/types/department.types';
 import { userQueryKeys } from './user-query-keys';
 import { roleQueryKeys } from '@/features/roles/hooks/role-query-keys';
@@ -44,7 +46,7 @@ export function useUserList(
 ) {
   return useQuery({
     queryKey: userQueryKeys.list(actorId, organizationId, params),
-    queryFn: () => userService.list(params),
+    queryFn: ({ signal }) => userService.list(params, signal),
     enabled: enabled && actorId.length > 0 && organizationId.length > 0,
   });
 }
@@ -130,6 +132,42 @@ export function useSetUserMembershipStatus(actorId: string, organizationId: stri
   return useMutation({
     mutationFn: ({ targetUserId, status }: { targetUserId: string; status: UserStatus }) =>
       userService.setMembershipStatus(targetUserId, status),
+    onSuccess: () => invalidateUserWorkspace(queryClient, actorId, organizationId),
+  });
+}
+
+export function useBulkUserImport(actorId: string, organizationId: string) {
+  const queryClient = useQueryClient();
+  const downloadTemplate = useMutation({
+    mutationFn: () => bulkUserService.downloadTemplate(),
+  });
+  const validateImport = useMutation({
+    mutationFn: (file: File) => bulkUserService.validateImport(file),
+  });
+  const downloadFailedReport = useMutation({
+    mutationFn: (file: File) => bulkUserService.downloadFailedReport(file),
+  });
+  const confirmImport = useMutation({
+    mutationFn: (file: File) => bulkUserService.confirmImport(file),
+    onSuccess: () => invalidateUserWorkspace(queryClient, actorId, organizationId),
+  });
+
+  return { downloadTemplate, validateImport, confirmImport, downloadFailedReport };
+}
+
+export function useBulkUserDeactivation(actorId: string, organizationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userIds: string[]) => bulkUserService.deactivateUsers(userIds),
+    onSuccess: () => invalidateUserWorkspace(queryClient, actorId, organizationId),
+  });
+}
+
+export function useBulkMembershipStatus(actorId: string, organizationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userIds, status }: { userIds: string[]; status: BulkMembershipTargetStatus }) =>
+      bulkUserService.changeMembershipStatus(userIds, status),
     onSuccess: () => invalidateUserWorkspace(queryClient, actorId, organizationId),
   });
 }

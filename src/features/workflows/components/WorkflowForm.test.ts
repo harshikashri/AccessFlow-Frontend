@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { WorkflowForm } from './WorkflowForm';
 import { formatWorkflowCondition, serializeWorkflowStages } from './workflow-form.utils';
 import type { RequestType } from '@/features/requests/types/request.types';
+import type { ManagedRole } from '@/features/roles/types/role.types';
 import type { WorkflowCondition, WorkflowStage } from '../types/workflow.types';
 
 const requestType: RequestType = {
@@ -109,6 +110,59 @@ describe('serializeWorkflowStages', () => {
 });
 
 describe('WorkflowForm', () => {
+  it('requires an exact supported scope when a workflow role supports both', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const role: ManagedRole = {
+      id: 'role-1',
+      organizationId: 'organization-1',
+      name: 'Dual Scope Approver',
+      description: '',
+      roleType: 'CUSTOM',
+      rolePurpose: 'FINANCE_APPROVER',
+      assignmentScopes: ['ORGANIZATION', 'DEPARTMENT'],
+      permissions: ['requests.approve'],
+      status: 'ACTIVE',
+      createdAt: '',
+      updatedAt: '',
+      createdBy: null,
+      assignmentCount: 0,
+    };
+    render(
+      createElement(WorkflowForm, {
+        requestTypes: [requestType],
+        roles: [role],
+        isSubmitting: false,
+        error: null,
+        onCancel: vi.fn(),
+        onSubmit,
+      }),
+    );
+
+    await user.type(screen.getByLabelText(/Workflow name/), 'Department budget approvals');
+    await user.selectOptions(screen.getByLabelText(/Request type/), requestType.id);
+    await user.click(screen.getByRole('button', { name: 'Add stage' }));
+    await user.selectOptions(screen.getAllByLabelText('Approver')[1]!, 'ROLE');
+    await user.selectOptions(screen.getByLabelText('Approval role'), role.id);
+    expect((screen.getByLabelText('Approver eligibility') as HTMLSelectElement).value).toBe('');
+    await user.selectOptions(screen.getByLabelText('Approver eligibility'), 'ORGANIZATION');
+    await user.click(screen.getByRole('button', { name: 'Save workflow' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stages: expect.arrayContaining([
+          expect.objectContaining({
+            approverType: 'ROLE',
+            assignment: expect.objectContaining({
+              roleId: role.id,
+              scopeType: 'ORGANIZATION',
+            }),
+          }),
+        ]),
+      }),
+    );
+  });
+
   it('submits the configured request selection condition', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

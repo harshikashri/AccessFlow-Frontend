@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -11,6 +11,7 @@ import { RoleTable } from '@/features/roles/components/RoleTable';
 import { useRoleList } from '@/features/roles/hooks/useRoles';
 import type { RoleListParams } from '@/features/roles/types/role.types';
 import { APP_ROUTES } from '@/routes/route.constants';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -18,19 +19,12 @@ export function RoleListPage() {
   const { user, authorizationStatus } = useAuth();
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 250);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<NonNullable<RoleListParams['status']> | ''>('');
   const [sortBy, setSortBy] = useState<RoleListParams['sortBy']>('createdAt');
   const [sortOrder, setSortOrder] = useState<RoleListParams['sortOrder']>('desc');
   const [page, setPage] = useState(1);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
 
   const organizationId = user?.organizationId ?? '';
   const canView = Boolean(user && hasOrganizationPermission(user.authorization, 'roles.view'));
@@ -66,7 +60,6 @@ export function RoleListPage() {
 
   function clearFilters() {
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setSortBy('createdAt');
     setSortOrder('desc');
@@ -110,7 +103,10 @@ export function RoleListPage() {
           status={status}
           sortBy={sortBy}
           sortOrder={sortOrder}
-          onSearchChange={setSearchInput}
+          onSearchChange={(value) => {
+            setSearchInput(value);
+            setPage(1);
+          }}
           onStatusChange={(value) => {
             setStatus(value);
             setPage(1);

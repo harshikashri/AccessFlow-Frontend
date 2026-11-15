@@ -15,6 +15,9 @@ import {
 } from '@/features/users/hooks/useUsers';
 import { UserFilters } from '@/features/users/components/UserFilters';
 import { UserTable } from '@/features/users/components/UserTable';
+import { BulkImportDialog } from '@/features/users/components/BulkImportDialog';
+import { BulkMembershipDialog } from '@/features/users/components/BulkMembershipDialog';
+import { canManageUserMembership } from '@/features/users/utils/user.utils';
 import type {
   UserListParams,
   UserProfile,
@@ -23,6 +26,7 @@ import type {
   UserStatus,
 } from '@/features/users/types/user.types';
 import { APP_ROUTES } from '@/routes/route.constants';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -30,26 +34,27 @@ export function UserListPage() {
   const { user, authorizationStatus } = useAuth();
   const { showToast } = useToast();
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<UserStatus | ''>('');
   const [departmentId, setDepartmentId] = useState('');
   const [roleId, setRoleId] = useState('');
   const [sortBy, setSortBy] = useState<UserSortField>('createdAt');
   const [sortOrder, setSortOrder] = useState<UserSortOrder>('desc');
   const [page, setPage] = useState(1);
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(() => new Set());
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [bulkMembershipStatus, setBulkMembershipStatus] = useState<UserStatus | null>(null);
   const [membershipChange, setMembershipChange] = useState<{
     user: UserProfile;
     status: UserStatus;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const organizationId = user?.organizationId ?? '';
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
+    setSelectedUserIds(new Set());
+  }, [departmentId, organizationId, page, roleId, search, searchInput, sortBy, sortOrder, status]);
 
   const params = useMemo<UserListParams>(
     () => ({
@@ -64,7 +69,6 @@ export function UserListPage() {
     }),
     [departmentId, page, roleId, search, sortBy, sortOrder, status],
   );
-  const organizationId = user?.organizationId ?? '';
   const canViewList = Boolean(
     user && hasPermission(user.authorization, 'users.view', 'organization-or-department'),
   );
@@ -94,12 +98,21 @@ export function UserListPage() {
   }
 
   const canCreate = hasOrganizationPermission(user.authorization, 'users.create');
+  const canBulkChangeMembership = hasOrganizationPermission(user.authorization, 'users.deactivate');
+  const visibleUsers = listQuery.data?.users ?? [];
+  const selectedUsers = visibleUsers.filter((targetUser) => selectedUserIds.has(targetUser.id));
+  const selectedActiveUsers = selectedUsers.filter(
+    (targetUser) => targetUser.membership.status === 'ACTIVE',
+  );
+  const selectedInactiveUsers = selectedUsers.filter(
+    (targetUser) => targetUser.membership.status === 'INACTIVE',
+  );
   const pagination = listQuery.data?.pagination;
   const hasFilters = Boolean(searchInput.trim() || status || departmentId || roleId);
 
   function clearFilters() {
+    setSelectedUserIds(new Set());
     setSearchInput('');
-    setSearch('');
     setStatus('');
     setDepartmentId('');
     setRoleId('');
@@ -158,9 +171,14 @@ export function UserListPage() {
               Refresh
             </Button>
             {canCreate && (
-              <Link className="ui-button ui-button--primary" to={APP_ROUTES.newUser}>
-                Add user
-              </Link>
+              <>
+                <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
+                  Bulk import
+                </Button>
+                <Link className="ui-button ui-button--primary" to={APP_ROUTES.newUser}>
+                  Add user
+                </Link>
+              </>
             )}
           </div>
         }
@@ -201,29 +219,65 @@ export function UserListPage() {
                 : null
           }
           hasFilters={hasFilters}
-          onSearchChange={setSearchInput}
+          onSearchChange={(value) => {
+            setSelectedUserIds(new Set());
+            setSearchInput(value);
+            setPage(1);
+          }}
           onStatusChange={(value) => {
+            setSelectedUserIds(new Set());
             setStatus(value);
             setPage(1);
           }}
           onDepartmentChange={(value) => {
+            setSelectedUserIds(new Set());
             setDepartmentId(value);
             setPage(1);
           }}
           onRoleChange={(value) => {
+            setSelectedUserIds(new Set());
             setRoleId(value);
             setPage(1);
           }}
           onSortByChange={(value) => {
+            setSelectedUserIds(new Set());
             setSortBy(value);
             setPage(1);
           }}
           onSortOrderChange={(value) => {
+            setSelectedUserIds(new Set());
             setSortOrder(value);
             setPage(1);
           }}
           onClear={clearFilters}
         />
+        {canBulkChangeMembership && selectedUserIds.size > 0 && (
+          <div className="bulk-user-toolbar" aria-live="polite">
+            <p>
+              {selectedUserIds.size} {selectedUserIds.size === 1 ? 'user' : 'users'} selected on
+              this page
+            </p>
+            <div>
+              <Button variant="outline" size="sm" onClick={() => setSelectedUserIds(new Set())}>
+                Clear selection
+              </Button>
+              {selectedActiveUsers.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setBulkMembershipStatus('INACTIVE')}
+                >
+                  Deactivate {selectedActiveUsers.length} active
+                </Button>
+              )}
+              {selectedInactiveUsers.length > 0 && (
+                <Button size="sm" onClick={() => setBulkMembershipStatus('ACTIVE')}>
+                  Reactivate {selectedInactiveUsers.length} inactive
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
         {listQuery.isError && !listQuery.data ? (
           <ErrorState
             title="Users could not be loaded"
@@ -248,6 +302,36 @@ export function UserListPage() {
               hasFilters={hasFilters}
               canCreate={canCreate}
               onClearFilters={clearFilters}
+              {...(canBulkChangeMembership
+                ? {
+                    selection: {
+                      selectedIds: selectedUserIds,
+                      canSelectUser: (targetUser) =>
+                        targetUser.id !== user.id &&
+                        (targetUser.membership.status === 'ACTIVE' ||
+                          targetUser.membership.status === 'INACTIVE') &&
+                        canManageUserMembership(user, targetUser.membership.departmentId),
+                      onToggle: (targetUserId, selected) => {
+                        setSelectedUserIds((current) => {
+                          const next = new Set(current);
+                          if (selected) next.add(targetUserId);
+                          else next.delete(targetUserId);
+                          return next;
+                        });
+                      },
+                      onSelectPage: (userIds, selected) => {
+                        setSelectedUserIds((current) => {
+                          const next = new Set(current);
+                          for (const targetUserId of userIds) {
+                            if (selected) next.add(targetUserId);
+                            else next.delete(targetUserId);
+                          }
+                          return next;
+                        });
+                      },
+                    },
+                  }
+                : {})}
               onSetMembershipStatus={(targetUser, nextStatus) => {
                 setActionError(null);
                 setMembershipChange({ user: targetUser, status: nextStatus });
@@ -265,7 +349,10 @@ export function UserListPage() {
                     variant="outline"
                     size="sm"
                     disabled={!pagination.hasPreviousPage || listQuery.isFetching}
-                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    onClick={() => {
+                      setSelectedUserIds(new Set());
+                      setPage((current) => Math.max(1, current - 1));
+                    }}
                   >
                     Previous
                   </Button>
@@ -276,7 +363,10 @@ export function UserListPage() {
                     variant="outline"
                     size="sm"
                     disabled={!pagination.hasNextPage || listQuery.isFetching}
-                    onClick={() => setPage((current) => current + 1)}
+                    onClick={() => {
+                      setSelectedUserIds(new Set());
+                      setPage((current) => current + 1);
+                    }}
                   >
                     Next
                   </Button>
@@ -286,6 +376,24 @@ export function UserListPage() {
           </>
         )}
       </Card>
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        actorId={user.id}
+        organizationId={organizationId}
+        onOpenChange={setIsBulkImportOpen}
+      />
+      <BulkMembershipDialog
+        open={bulkMembershipStatus !== null}
+        users={bulkMembershipStatus === 'ACTIVE' ? selectedInactiveUsers : selectedActiveUsers}
+        status={bulkMembershipStatus ?? 'INACTIVE'}
+        actorId={user.id}
+        organizationId={organizationId}
+        onOpenChange={(open) => {
+          if (!open) setBulkMembershipStatus(null);
+        }}
+        onComplete={() => setSelectedUserIds(new Set())}
+      />
 
       <Modal
         open={membershipChange !== null}
@@ -325,9 +433,9 @@ export function UserListPage() {
           </Alert>
         )}
         <p>
-          {membershipChange?.user.name} will{' '}
-          {membershipChange?.status === 'ACTIVE' ? 'regain' : 'lose'} access to this organization
-          when the change succeeds.
+          {membershipChange?.status === 'ACTIVE'
+            ? `${membershipChange.user.name}'s membership will be active. They can access the organization once their global account is active and password setup is complete.`
+            : `${membershipChange?.user.name ?? 'The user'} will lose access to this organization when the change succeeds.`}
         </p>
       </Modal>
     </div>

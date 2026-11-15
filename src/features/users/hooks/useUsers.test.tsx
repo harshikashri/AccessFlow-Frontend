@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { dashboardQueryKeys } from '@/features/dashboard/hooks/dashboard-query-keys';
 import { departmentQueryKeys } from '@/features/departments/hooks/department-query-keys';
 import { userQueryKeys } from '@/features/users/hooks/user-query-keys';
-import { useUpdateUser } from '@/features/users/hooks/useUsers';
+import { useBulkUserDeactivation, useUpdateUser } from '@/features/users/hooks/useUsers';
 import type { UserListParams } from '@/features/users/types/user.types';
 
 const serviceMock = vi.hoisted(() => ({
@@ -17,8 +17,19 @@ const serviceMock = vi.hoisted(() => ({
   sendPasswordInstructions: vi.fn(),
 }));
 
+const bulkUserServiceMock = vi.hoisted(() => ({
+  downloadTemplate: vi.fn(),
+  validateImport: vi.fn(),
+  confirmImport: vi.fn(),
+  deactivateUsers: vi.fn(),
+}));
+
 vi.mock('@/features/users/services/user.service', () => ({
   userService: serviceMock,
+}));
+
+vi.mock('@/features/users/services/bulk-user.service', () => ({
+  bulkUserService: bulkUserServiceMock,
 }));
 
 vi.mock('@/features/users/services/user-role.service', () => ({
@@ -76,5 +87,33 @@ describe('user query mutations', () => {
     expect(queryClient.getQueryState(otherTenantUserKey)?.isInvalidated).toBe(false);
     expect(queryClient.getQueryState(departmentKey)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(dashboardKey)?.isInvalidated).toBe(true);
+  });
+
+  it('invalidates the active organization user workspace after bulk deactivation', async () => {
+    const userId = 'user-1';
+    const organizationId = '64b000000000000000000002';
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const userListKey = userQueryKeys.list(userId, organizationId, params);
+    queryClient.setQueryData(userListKey, { users: [] });
+    bulkUserServiceMock.deactivateUsers.mockResolvedValue({
+      summary: { requested: 1, deactivated: 1, failed: 0 },
+      results: [{ userId: 'target-user', status: 'DEACTIVATED', message: 'Deactivated.' }],
+    });
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useBulkUserDeactivation(userId, organizationId), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync(['target-user']);
+    });
+
+    expect(queryClient.getQueryState(userListKey)?.isInvalidated).toBe(true);
+    expect(bulkUserServiceMock.deactivateUsers).toHaveBeenCalledWith(['target-user']);
   });
 });

@@ -32,7 +32,7 @@ export function useRequestList(
 ) {
   return useQuery({
     queryKey: requestQueryKeys.list(userId, organizationId, params),
-    queryFn: () => requestService.list(params),
+    queryFn: ({ signal }) => requestService.list(params, signal),
     enabled: enabled && Boolean(userId && organizationId),
   });
 }

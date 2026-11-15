@@ -457,8 +457,9 @@ export function UserDetailsPage() {
           </Alert>
         )}
         <p>
-          {targetUser.name} will {membershipChange === 'ACTIVE' ? 'regain' : 'lose'} access to this
-          organization.
+          {membershipChange === 'ACTIVE'
+            ? `${targetUser.name}'s membership will be active. They can access the organization once their global account is active and password setup is complete.`
+            : `${targetUser.name} will lose access to this organization.`}
         </p>
       </Modal>
     </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Alert, Button, Input, Modal, Select } from '@/components/ui';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -16,6 +17,9 @@ import type {
 } from '@/features/users/types/user.types';
 import { canAssignRoleAtScope, isDuplicateRoleAssignment } from '@/features/users/utils/user.utils';
 import type { ManagedRole } from '@/features/roles/types/role.types';
+import { getRoleSupportedScopes } from '@/features/roles/utils/role.utils';
+import { APP_ROUTES } from '@/routes/route.constants';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -27,12 +31,9 @@ interface RoleAssignmentDialogProps {
   onAssign: (payload: UserRoleAssignmentRequest) => Promise<void>;
 }
 
-function getDefaultScope(role: ManagedRole): UserScopeType {
-  if (role.roleType === 'ORGANIZATION_ADMIN') return 'ORGANIZATION';
-  if (role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER') {
-    return 'DEPARTMENT';
-  }
-  return 'ORGANIZATION';
+function getDefaultScope(role: ManagedRole): UserScopeType | '' {
+  const scopes = getRoleSupportedScopes(role);
+  return scopes.length === 1 ? (scopes[0] ?? '') : '';
 }
 
 export function RoleAssignmentDialog({
@@ -52,21 +53,20 @@ export function RoleAssignmentDialog({
     user && hasPermission(user.authorization, 'departments.view', 'organization-or-department'),
   );
   const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 250);
+  const trimmedSearch = searchInput.trim();
+  const search =
+    trimmedSearch.length >= 2 && trimmedSearch === debouncedSearch ? debouncedSearch : '';
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [scopeType, setScopeType] = useState<UserScopeType>(() => getDefaultScope(role));
+  const [scopeType, setScopeType] = useState<UserScopeType | ''>(() => getDefaultScope(role));
   const [departmentId, setDepartmentId] = useState('');
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSearch(searchInput.trim()), 250);
-    return () => window.clearTimeout(timer);
-  }, [searchInput]);
+  const supportedScopes = getRoleSupportedScopes(role);
+  const customScopeUnconfigured = role.roleType === 'CUSTOM' && supportedScopes.length === 0;
 
   useEffect(() => {
     if (!open) return;
     setSearchInput('');
-    setSearch('');
     setSelectedUser(null);
     setDepartmentId('');
     setScopeType(getDefaultScope(role));
@@ -113,6 +113,7 @@ export function RoleAssignmentDialog({
   const existingAssignments = assignmentsQuery.data ?? [];
   const isDuplicate =
     selectedUser !== null &&
+    scopeType !== '' &&
     isDuplicateRoleAssignment(existingAssignments, {
       roleId: role.id,
       scopeType,
@@ -121,27 +122,20 @@ export function RoleAssignmentDialog({
   const canAssign = Boolean(
     user &&
     selectedUser &&
+    scopeType &&
     role.status === 'ACTIVE' &&
     canAssignRoleAtScope(user, role, scopeType, selectedDepartmentId),
   );
-  const scopeOptions =
-    role.roleType === 'ORGANIZATION_ADMIN'
-      ? [{ value: 'ORGANIZATION', label: 'Organization' }]
-      : role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER'
-        ? [{ value: 'DEPARTMENT', label: 'Department' }]
-        : [
-            { value: 'ORGANIZATION', label: 'Organization' },
-            { value: 'DEPARTMENT', label: 'Department' },
-          ];
 
   async function submitAssignment() {
-    if (!selectedUser || !canAssign || isSaving || isDuplicate) return;
+    const selectedScope = scopeType;
+    if (!selectedUser || !selectedScope || !canAssign || isSaving || isDuplicate) return;
     setSaveError(null);
     try {
       await onAssign({
         userId: selectedUser.id,
-        scopeType,
-        ...(scopeType === 'DEPARTMENT' && departmentId ? { departmentId } : {}),
+        scopeType: selectedScope,
+        ...(selectedScope === 'DEPARTMENT' && departmentId ? { departmentId } : {}),
       });
       onOpenChange(false);
     } catch (error) {
@@ -154,9 +148,7 @@ export function RoleAssignmentDialog({
       open={open}
       title={`Assign ${role.name}`}
       description={
-        role.rolePurpose === 'FINANCE_APPROVER'
-          ? 'Finance Approver assignments must be limited to a department. The backend also checks active membership and permission scope.'
-          : 'The backend validates active membership, organization scope, role compatibility, and your permission scope.'
+        'The backend validates active membership, the selected assignment scope, role compatibility, and your permission scope.'
       }
       onOpenChange={(nextOpen) => {
         if (!isSaving) onOpenChange(nextOpen);
@@ -256,24 +248,28 @@ export function RoleAssignmentDialog({
       )}
 
       <div className="role-assignment-form__scope">
-        <Select
-          label="Assignment scope"
-          name="scopeType"
-          value={scopeType}
-          disabled={isSaving || scopeOptions.length === 1}
-          onChange={(event) => {
-            setScopeType(event.target.value as UserScopeType);
-            setDepartmentId('');
-          }}
-          options={scopeOptions}
-          helperText={
-            role.roleType === 'ORGANIZATION_ADMIN'
-              ? 'Organization Admin assignments are organization-wide.'
-              : role.roleType === 'DEPARTMENT_MANAGER'
-                ? 'Department Manager assignments require a department scope.'
-                : 'The role is attached to the selected scope, not to the role definition.'
-          }
-        />
+        {supportedScopes.length > 1 ? (
+          <Select
+            label="Assignment scope"
+            name="scopeType"
+            value={scopeType}
+            placeholder="Choose a supported scope"
+            disabled={isSaving}
+            onChange={(event) => {
+              setScopeType(event.target.value as UserScopeType);
+              setDepartmentId('');
+            }}
+            options={supportedScopes.map((scope) => ({
+              value: scope,
+              label: scope === 'ORGANIZATION' ? 'Organization' : 'Department',
+            }))}
+            helperText="This role supports both scopes; choose the scope for this user assignment."
+          />
+        ) : supportedScopes.length === 1 ? (
+          <p>
+            Assignment scope: {supportedScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
+          </p>
+        ) : null}
         {scopeType === 'DEPARTMENT' &&
           (canViewDepartments ? (
             <>
@@ -313,6 +309,14 @@ export function RoleAssignmentDialog({
           ))}
       </div>
 
+      {customScopeUnconfigured && (
+        <Alert variant="warning" title="Assignment scope configuration required">
+          This legacy custom role can still be viewed, but it cannot be assigned until an
+          administrator edits the role and selects an assignment scope.{' '}
+          <Link to={`${APP_ROUTES.roles}/${role.id}/edit`}>Configure role</Link>
+        </Alert>
+      )}
+
       {selectedUser && assignmentsQuery.isError && (
         <Alert variant="error" title="Existing assignments could not be checked">
           {getAuthErrorMessage(
@@ -334,12 +338,16 @@ export function RoleAssignmentDialog({
           This user already has this role at the selected scope.
         </Alert>
       )}
-      {selectedUser && !isDuplicate && !canAssign && role.status === 'ACTIVE' && (
-        <Alert variant="warning" title="This scope is outside your effective permissions">
-          The backend will not allow an assignment that grants permissions beyond your current
-          organization or department scope.
-        </Alert>
-      )}
+      {selectedUser &&
+        !customScopeUnconfigured &&
+        !isDuplicate &&
+        !canAssign &&
+        role.status === 'ACTIVE' && (
+          <Alert variant="warning" title="This scope is outside your effective permissions">
+            The backend will not allow an assignment that grants permissions beyond your current
+            organization or department scope.
+          </Alert>
+        )}
       {role.status !== 'ACTIVE' && (
         <Alert variant="warning" title="Inactive roles cannot be assigned">
           Activate this custom role before assigning it. The backend remains authoritative.

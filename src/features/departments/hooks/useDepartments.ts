@@ -29,7 +29,7 @@ export function useDepartmentList(
 ) {
   return useQuery({
     queryKey: departmentQueryKeys.list(userId, organizationId, params),
-    queryFn: () => departmentService.list(params),
+    queryFn: ({ signal }) => departmentService.list(params, signal),
     enabled: userId.length > 0 && organizationId.length > 0,
   });
 }

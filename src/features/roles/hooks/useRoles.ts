@@ -42,7 +42,7 @@ export function useRoleList(
 ) {
   return useQuery({
     queryKey: roleQueryKeys.list(actorId, organizationId, params),
-    queryFn: () => roleService.list(params),
+    queryFn: ({ signal }) => roleService.list(params, signal),
     enabled: enabled && actorId.length > 0 && organizationId.length > 0,
   });
 }

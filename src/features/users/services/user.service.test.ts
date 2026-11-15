@@ -117,6 +117,33 @@ describe('userService', () => {
     ).resolves.toEqual(responseData);
   });
 
+  it('forwards query cancellation to the HTTP client', async () => {
+    apiClientMock.get.mockResolvedValue(
+      response({
+        users: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      }),
+    );
+    const controller = new AbortController();
+
+    await userService.list(
+      { page: 1, limit: 10, search: 'Taylor', sortBy: 'name', sortOrder: 'asc' },
+      controller.signal,
+    );
+
+    expect(apiClientMock.get).toHaveBeenCalledWith(
+      '/users',
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
   it('accepts legacy users without the optional password setup flag', async () => {
     const legacyUser: UserProfile = { ...user };
     delete legacyUser.passwordSetupRequired;
@@ -225,6 +252,37 @@ describe('userService', () => {
 });
 
 describe('userRoleService', () => {
+  it('keeps legacy custom roles without an assignment scope in the role catalog', async () => {
+    const legacyCustomRole = {
+      id: roleId,
+      organizationId: '64b000000000000000000005',
+      name: 'Legacy Viewer',
+      description: '',
+      roleType: 'CUSTOM',
+      rolePurpose: 'GENERAL',
+      assignmentScope: null,
+      permissions: ['users.view'],
+      status: 'ACTIVE',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      updatedAt: '2026-01-02T10:00:00.000Z',
+    };
+    apiClientMock.get.mockResolvedValue(
+      response({
+        items: [legacyCustomRole],
+        pagination: {
+          page: 1,
+          limit: 100,
+          total: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      }),
+    );
+
+    await expect(userRoleService.listActiveRoles()).resolves.toEqual([legacyCustomRole]);
+  });
+
   it('accepts all backend role types, including Finance Approver', async () => {
     const role = {
       id: roleId,

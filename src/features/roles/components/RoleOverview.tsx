@@ -2,6 +2,7 @@ import { Badge, Card } from '@/components/ui';
 import { RoleStatusBadge } from '@/features/roles/components/RoleStatusBadge';
 import { RoleTypeBadge } from '@/features/roles/components/RoleTypeBadge';
 import type { ManagedRole } from '@/features/roles/types/role.types';
+import { getRoleSupportedScopes } from '@/features/roles/utils/role.utils';
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -11,6 +12,7 @@ function formatDate(value: string): string {
 }
 
 export function RoleOverview({ role }: { role: ManagedRole }) {
+  const supportedScopes = getRoleSupportedScopes(role);
   return (
     <Card title="Role overview" description={role.description || 'No description provided.'}>
       <dl className="role-overview">
@@ -23,6 +25,18 @@ export function RoleOverview({ role }: { role: ManagedRole }) {
         <div>
           <dt>Purpose</dt>
           <dd>{role.rolePurpose === 'FINANCE_APPROVER' ? 'Finance Approver' : 'General'}</dd>
+        </div>
+        <div>
+          <dt>Supported assignment scopes</dt>
+          <dd>
+            {supportedScopes.length
+              ? supportedScopes.map((scope) => (
+                  <Badge key={scope} variant="information">
+                    {scope === 'ORGANIZATION' ? 'Organization' : 'Department'}
+                  </Badge>
+                ))
+              : <Badge variant="warning">Unconfigured</Badge>}
+          </dd>
         </div>
         <div>
           <dt>Status</dt>
@@ -60,6 +74,12 @@ export function RoleOverview({ role }: { role: ManagedRole }) {
         Permissions listed for this role are not a user&apos;s complete effective access. Effective
         access also depends on each active assignment and its organization or department scope.
       </p>
+      {role.roleType === 'CUSTOM' && supportedScopes.length === 0 && (
+        <p className="role-overview__scope-note">
+          This legacy custom role must be edited to choose supported assignment scopes before it can be
+          assigned to users.
+        </p>
+      )}
     </Card>
   );
 }

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoleAssignmentDialog } from '@/features/roles/components/RoleAssignmentDialog';
 import type { ManagedRole } from '@/features/roles/types/role.types';
@@ -106,13 +107,15 @@ describe('RoleAssignmentDialog', () => {
     });
 
     render(
-      <RoleAssignmentDialog
-        open
-        role={role}
-        isSaving={false}
-        onOpenChange={vi.fn()}
-        onAssign={onAssign}
-      />,
+      <MemoryRouter>
+        <RoleAssignmentDialog
+          open
+          role={role}
+          isSaving={false}
+          onOpenChange={vi.fn()}
+          onAssign={onAssign}
+        />
+      </MemoryRouter>,
     );
 
     await user.type(screen.getByLabelText(/Find a user/), 'Taylor');
@@ -125,29 +128,44 @@ describe('RoleAssignmentDialog', () => {
     expect(onAssign).not.toHaveBeenCalled();
   });
 
-  it('defaults Finance Approver assignments to department scope only', () => {
+  it('uses the fixed department scope for the built-in Finance Approver role', () => {
     const financeRole: ManagedRole = {
       ...role,
       name: 'Finance Approver',
+      roleType: 'FINANCE_APPROVER',
       rolePurpose: 'FINANCE_APPROVER',
     };
 
     render(
-      <RoleAssignmentDialog
-        open
-        role={financeRole}
-        isSaving={false}
-        onOpenChange={vi.fn()}
-        onAssign={vi.fn()}
-      />,
+      <MemoryRouter>
+        <RoleAssignmentDialog
+          open
+          role={financeRole}
+          isSaving={false}
+          onOpenChange={vi.fn()}
+          onAssign={vi.fn()}
+        />
+      </MemoryRouter>,
     );
 
-    const scope = screen.getByLabelText('Assignment scope') as HTMLSelectElement;
-    expect(scope.value).toBe('DEPARTMENT');
-    expect(
-      Array.from(scope.options)
-        .map((option) => option.value)
-        .filter(Boolean),
-    ).toEqual(['DEPARTMENT']);
+    expect(screen.getByText('Assignment scope: Department')).toBeTruthy();
+  });
+
+  it('explains why an unconfigured legacy custom role cannot be assigned', () => {
+    render(
+      <MemoryRouter>
+        <RoleAssignmentDialog
+          open
+          role={role}
+          isSaving={false}
+          onOpenChange={vi.fn()}
+          onAssign={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Assignment scope configuration required')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Configure role' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Assign role' }).hasAttribute('disabled')).toBe(true);
   });
 });

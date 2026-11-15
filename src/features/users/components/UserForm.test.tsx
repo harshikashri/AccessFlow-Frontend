@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { UserForm } from '@/features/users/components/UserForm';
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
 import type { UserFormValues } from '@/features/users/types/user.types';
+import type { UserRole } from '@/features/users/types/user.types';
 
 const actor: AuthenticatedUser = {
   id: '64b000000000000000000010',
@@ -26,6 +27,63 @@ const initialValues: UserFormValues = {
 };
 
 describe('UserForm', () => {
+  it('asks for an exact scope when a role supports both scopes', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    const role: UserRole = {
+      id: '64b000000000000000000040',
+      organizationId: actor.organizationId ?? '',
+      name: 'Dual Scope Approver',
+      description: '',
+      roleType: 'CUSTOM',
+      rolePurpose: 'FINANCE_APPROVER',
+      assignmentScopes: ['ORGANIZATION', 'DEPARTMENT'],
+      permissions: ['users.view'],
+      status: 'ACTIVE',
+      createdAt: '',
+      updatedAt: '',
+    };
+    const department = {
+      id: '64b000000000000000000050',
+      organizationId: actor.organizationId ?? '',
+      name: 'Engineering',
+      description: '',
+      status: 'ACTIVE' as const,
+      managerCount: 0,
+      memberCount: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
+    render(
+      <UserForm
+        mode="create"
+        actor={actor}
+        departments={[department]}
+        roles={[role]}
+        isSubmitting={false}
+        onCancel={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await user.type(screen.getByLabelText(/Full name/), 'Taylor User');
+    await user.type(screen.getByLabelText(/Email address/), 'taylor@example.com');
+    await user.selectOptions(screen.getByLabelText('Role'), role.id);
+    expect((screen.getByLabelText('Assignment scope') as HTMLSelectElement).value).toBe('');
+    await user.selectOptions(screen.getByLabelText('Assignment scope'), 'DEPARTMENT');
+    await user.selectOptions(screen.getByLabelText('Role department'), department.id);
+    await user.click(screen.getByRole('button', { name: 'Add role' }));
+    await user.click(screen.getByRole('button', { name: 'Create user' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roleAssignments: [
+          { roleId: role.id, scopeType: 'DEPARTMENT', departmentId: department.id },
+        ],
+      }),
+    );
+  });
+
   it('validates required profile fields before sending a create request', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

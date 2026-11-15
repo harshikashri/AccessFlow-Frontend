@@ -135,9 +135,10 @@ function toListParams(params: UserListParams): Record<string, string> {
 }
 
 export const userService = {
-  async list(params: UserListParams): Promise<UserListResponse> {
+  async list(params: UserListParams, signal?: AbortSignal): Promise<UserListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/users', {
       params: toListParams(params),
+      ...(signal ? { signal } : {}),
     });
     return assertApiData(response, isUserListResponse);
   },

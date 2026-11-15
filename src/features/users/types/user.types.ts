@@ -100,6 +100,8 @@ export interface UserRole {
   description: string;
   roleType: UserRoleType;
   rolePurpose: 'GENERAL' | 'FINANCE_APPROVER';
+  assignmentScope?: UserScopeType | null;
+  assignmentScopes?: UserScopeType[];
   permissions: PermissionId[];
   status: UserStatus;
   createdAt: string;

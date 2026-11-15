@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Alert, Button, Card, Input, Select, Textarea } from '@/components/ui';
 import type { ManagedRole } from '@/features/roles/types/role.types';
+import { getRoleSupportedScopes } from '@/features/roles/utils/role.utils';
 import type { RequestField, RequestType } from '@/features/requests/types/request.types';
 import type {
   WorkflowApproverType,
-  WorkflowAssignmentScope,
   WorkflowFormErrors,
   WorkflowFormValues,
   WorkflowInput,
@@ -80,7 +80,6 @@ function createRoleStage(sequence: number): WorkflowStage {
     assignment: {
       type: 'ROLE',
       resolution: 'CLAIM_ONE',
-      scopeType: 'DEPARTMENT',
       roleId: null,
       userId: null,
     },
@@ -89,13 +88,10 @@ function createRoleStage(sequence: number): WorkflowStage {
   };
 }
 
-function isFinanceApprover(role: ManagedRole | undefined) {
-  return role?.roleType === 'FINANCE_APPROVER' || role?.rolePurpose === 'FINANCE_APPROVER';
-}
-
 function validate(
   values: WorkflowFormValues,
   requestTypes: RequestType[],
+  roles: ManagedRole[],
   allowDefaultWorkflow: boolean,
 ): WorkflowFormErrors {
   const errors: WorkflowFormErrors = {};
@@ -132,10 +128,26 @@ function validate(
     errors.stages = 'Exactly one mandatory Department Manager stage is required.';
   } else if (managerStages[0]?.sequence !== 1) {
     errors.stages = 'Department Manager approval must be the first stage.';
-  } else if (
-    values.stages.some((stage) => stage.approverType === 'ROLE' && !stage.assignment.roleId)
-  ) {
-    errors.stages = 'Select a role for every role-based approval stage.';
+  }
+  for (const stage of values.stages) {
+    if (stage.approverType !== 'ROLE') continue;
+    const role = roles.find((item) => item.id === stage.assignment.roleId);
+    if (!role) {
+      errors.stages = 'Select a role for every role-based approval stage.';
+      break;
+    }
+    const supportedScopes = getRoleSupportedScopes(role);
+    if (supportedScopes.length === 0) {
+      errors.stages = `${role.name} has no configured assignment scope. Configure its supported scopes first.`;
+      break;
+    }
+    if (
+      !stage.assignment.scopeType ||
+      !supportedScopes.includes(stage.assignment.scopeType as 'ORGANIZATION' | 'DEPARTMENT')
+    ) {
+      errors.stages = `Choose an exact scope supported by ${role.name} for every role-based approval stage.`;
+      break;
+    }
   }
   for (const stage of values.stages) {
     if (stage.sla && !isValidSla(stage.sla)) {
@@ -181,22 +193,26 @@ export function WorkflowForm({
           isDefault: initialValues.isDefault ?? false,
           selectionCondition: initialValues.selectionCondition ?? null,
           priority: initialValues.priority ?? 0,
-          stages: initialValues.stages.map((stage) => ({
-            ...stage,
-            assignment: {
-              ...stage.assignment,
-              ...(stage.approverType === 'ROLE'
-                ? {
-                    scopeType: isFinanceApprover(
-                      roles.find((role) => role.id === stage.assignment.roleId),
-                    )
-                      ? 'DEPARTMENT'
-                      : (stage.assignment.scopeType ?? 'ORGANIZATION_OR_DEPARTMENT'),
-                  }
-                : {}),
-            },
-            sla: isValidSla(stage.sla) ? stage.sla : null,
-          })),
+          stages: initialValues.stages.map((stage) => {
+            const assignment = { ...stage.assignment };
+            if (stage.approverType === 'ROLE') {
+              const role = roles.find((item) => item.id === stage.assignment.roleId);
+              const scopes = role ? getRoleSupportedScopes(role) : [];
+              const existingScope = stage.assignment.scopeType;
+              const scopeType = scopes.length === 1
+                ? (scopes[0] ?? null)
+                : scopes.includes(existingScope as 'ORGANIZATION' | 'DEPARTMENT')
+                  ? existingScope ?? null
+                  : null;
+              if (scopeType) assignment.scopeType = scopeType;
+              else delete assignment.scopeType;
+            }
+            return {
+              ...stage,
+              assignment,
+              sla: isValidSla(stage.sla) ? stage.sla : null,
+            };
+          }),
         }
       : {
           name: '',
@@ -260,7 +276,7 @@ export function WorkflowForm({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const validationErrors = validate(values, requestTypes, allowDefaultWorkflow);
+    const validationErrors = validate(values, requestTypes, roles, allowDefaultWorkflow);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length) return;
     void onSubmit({
@@ -472,18 +488,19 @@ export function WorkflowForm({
                   value={stage.approverType}
                   onChange={(event) => {
                     const approverType = event.target.value as WorkflowApproverType;
+                    const assignment: WorkflowStage['assignment'] = {
+                      ...stage.assignment,
+                      type: approverType,
+                      resolution: approverType === 'USER' ? 'DIRECT' : 'CLAIM_ONE',
+                      roleId: null,
+                      userId: null,
+                    };
+                    delete assignment.scopeType;
                     updateStage(index, {
                       approverType,
                       isMandatory: approverType === 'DEPARTMENT_MANAGER',
                       isConfigurable: approverType !== 'DEPARTMENT_MANAGER',
-                      assignment: {
-                        ...stage.assignment,
-                        type: approverType,
-                        resolution: approverType === 'USER' ? 'DIRECT' : 'CLAIM_ONE',
-                        ...(approverType === 'ROLE' ? { scopeType: 'DEPARTMENT' } : {}),
-                        roleId: null,
-                        userId: null,
-                      },
+                      assignment,
                     });
                   }}
                   options={[
@@ -500,14 +517,18 @@ export function WorkflowForm({
                     onChange={(event) => {
                       const roleId = event.target.value || null;
                       const role = roles.find((item) => item.id === roleId);
+                      const scopes = role ? getRoleSupportedScopes(role) : [];
+                      const currentScope = stage.assignment.scopeType;
+                      const scopeType = scopes.length === 1
+                        ? scopes[0]
+                        : scopes.includes(currentScope as 'ORGANIZATION' | 'DEPARTMENT')
+                          ? currentScope
+                          : undefined;
+                      const assignment: WorkflowStage['assignment'] = { ...stage.assignment, roleId };
+                      if (scopeType) assignment.scopeType = scopeType;
+                      else delete assignment.scopeType;
                       updateStage(index, {
-                        assignment: {
-                          ...stage.assignment,
-                          roleId,
-                          scopeType: isFinanceApprover(role)
-                            ? 'DEPARTMENT'
-                            : (stage.assignment.scopeType ?? 'ORGANIZATION_OR_DEPARTMENT'),
-                        },
+                        assignment,
                       });
                     }}
                     options={[
@@ -521,41 +542,52 @@ export function WorkflowForm({
                     disabled={isSubmitting}
                   />
                 )}
-                {stage.approverType === 'ROLE' && (
-                  <Select
-                    label="Approver eligibility"
-                    value={stage.assignment.scopeType ?? 'DEPARTMENT'}
-                    onChange={(event) =>
-                      updateStage(index, {
-                        assignment: {
-                          ...stage.assignment,
-                          scopeType: event.target.value as WorkflowAssignmentScope,
-                        },
-                      })
-                    }
-                    options={
-                      isFinanceApprover(roles.find((role) => role.id === stage.assignment.roleId))
-                        ? [{ value: 'DEPARTMENT', label: 'Members of this department only' }]
-                        : [
-                            { value: 'DEPARTMENT', label: 'Members of this department only' },
-                            { value: 'ORGANIZATION', label: 'Organization-wide role holders' },
-                            {
-                              value: 'ORGANIZATION_OR_DEPARTMENT',
-                              label: 'Organization-wide or department role holders',
+                {stage.approverType === 'ROLE' && (() => {
+                  const role = roles.find((item) => item.id === stage.assignment.roleId);
+                  const scopes = role ? getRoleSupportedScopes(role) : [];
+                  if (scopes.length > 1) {
+                    return (
+                      <Select
+                        label="Approver eligibility"
+                        value={stage.assignment.scopeType ?? ''}
+                        placeholder="Choose an exact scope"
+                        onChange={(event) =>
+                          updateStage(index, {
+                            assignment: {
+                              ...stage.assignment,
+                              scopeType: event.target.value as 'ORGANIZATION' | 'DEPARTMENT',
                             },
-                          ]
-                    }
-                    helperText={
-                      isFinanceApprover(roles.find((role) => role.id === stage.assignment.roleId))
-                        ? 'Finance approval is restricted to this request’s department.'
-                        : 'Controls which role holders can claim this approval.'
-                    }
-                    disabled={
-                      isSubmitting ||
-                      isFinanceApprover(roles.find((role) => role.id === stage.assignment.roleId))
-                    }
-                  />
-                )}
+                          })
+                        }
+                        options={scopes.map((scope) => ({
+                          value: scope,
+                          label: scope === 'ORGANIZATION'
+                            ? 'Organization-wide role holders'
+                            : 'Members of the request department',
+                        }))}
+                        helperText="Choose exactly which assignments can approve this stage."
+                        disabled={isSubmitting}
+                      />
+                    );
+                  }
+                  if (scopes.length === 1) {
+                    return (
+                      <p className="workflow-form__scope-note">
+                        Approver eligibility: {scopes[0] === 'ORGANIZATION'
+                          ? 'Organization-wide role holders'
+                          : 'Members of the request department'}
+                      </p>
+                    );
+                  }
+                  return role ? (
+                    <Alert variant="warning" title="Role scope configuration required">
+                      Configure supported scopes for {role.name} before using it as a workflow
+                      approver.
+                    </Alert>
+                  ) : (
+                    <p className="workflow-form__scope-note">Select a role to view its supported scopes.</p>
+                  );
+                })()}
               </div>
               {stage.approverType !== 'DEPARTMENT_MANAGER' && (
                 <WorkflowConditionBuilder

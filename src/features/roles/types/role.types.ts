@@ -82,23 +82,27 @@ export interface CreateRoleRequest {
   description: string;
   permissions: PermissionId[];
   rolePurpose: 'GENERAL' | 'FINANCE_APPROVER';
+  assignmentScopes: RoleScopeType[];
 }
 
 export interface UpdateRoleRequest {
   name?: string;
   description?: string;
   rolePurpose?: 'GENERAL' | 'FINANCE_APPROVER';
+  assignmentScopes?: RoleScopeType[];
 }
 
 export interface RoleFormValues {
   name: string;
   description: string;
   rolePurpose: 'GENERAL' | 'FINANCE_APPROVER';
+  assignmentScopes: RoleScopeType[];
 }
 
 export interface RoleFormErrors {
   name?: string;
   description?: string;
+  assignmentScopes?: string;
 }
 
 export type RoleAssignmentPayload = UserRoleAssignmentRequest;

@@ -4,6 +4,7 @@ import type {
   RoleFormValues,
 } from '@/features/roles/types/role.types';
 import type { UserRole } from '@/features/users/types/user.types';
+import type { UserScopeType } from '@/features/users/types/user.types';
 import type { PermissionId } from '@/features/authorization/permission-catalog';
 
 const roleNameMinLength = 2;
@@ -14,6 +15,24 @@ export function isBuiltInRole(role: Pick<UserRole, 'roleType'>): boolean {
   return role.roleType !== 'CUSTOM';
 }
 
+export function getRoleSupportedScopes(
+  role: Pick<UserRole, 'roleType' | 'assignmentScope' | 'assignmentScopes'>,
+): UserScopeType[] {
+  if (role.roleType === 'ORGANIZATION_ADMIN') return ['ORGANIZATION'];
+  if (role.roleType === 'EMPLOYEE') return ['ORGANIZATION', 'DEPARTMENT'];
+  if (role.roleType === 'DEPARTMENT_MANAGER' || role.roleType === 'FINANCE_APPROVER') {
+    return ['DEPARTMENT'];
+  }
+  const configuredScopes = role.assignmentScopes?.length
+    ? role.assignmentScopes
+    : role.assignmentScope
+      ? [role.assignmentScope]
+      : [];
+  return (['ORGANIZATION', 'DEPARTMENT'] as const).filter((scope) =>
+    configuredScopes.includes(scope),
+  );
+}
+
 export function isRoleId(value: string): boolean {
   return /^[a-f\d]{24}$/i.test(value);
 }
@@ -22,7 +41,10 @@ export function canEditRolePermissions(role: Pick<UserRole, 'roleType'>): boolea
   return role.roleType === 'CUSTOM' || role.roleType === 'DEPARTMENT_MANAGER';
 }
 
-export function validateRoleForm(values: RoleFormValues): RoleFormErrors {
+export function validateRoleForm(
+  values: RoleFormValues,
+  requiresAssignmentScope = true,
+): RoleFormErrors {
   const errors: RoleFormErrors = {};
   const name = values.name.trim();
   const description = values.description.trim();
@@ -32,6 +54,9 @@ export function validateRoleForm(values: RoleFormValues): RoleFormErrors {
   }
   if (description.length > roleDescriptionMaxLength) {
     errors.description = `Description cannot exceed ${roleDescriptionMaxLength} characters.`;
+  }
+  if (requiresAssignmentScope && values.assignmentScopes.length === 0) {
+    errors.assignmentScopes = 'Select at least one supported assignment scope for this custom role.';
   }
 
   return errors;

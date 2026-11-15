@@ -1,12 +1,16 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Alert, Button, Input, Select } from '@/components/ui';
+import { Alert, Button, Checkbox, Input, Select } from '@/components/ui';
 import { Textarea } from '@/components/ui/Textarea';
-import type { RoleFormErrors, RoleFormValues } from '@/features/roles/types/role.types';
+import type {
+  RoleFormErrors,
+  RoleFormValues,
+} from '@/features/roles/types/role.types';
 import { validateRoleForm } from '@/features/roles/utils/role.utils';
 
 interface RoleFormProps {
   initialValues: RoleFormValues;
   isBuiltIn: boolean;
+  isLegacyCustomRoleUnconfigured?: boolean;
   isSaving: boolean;
   error?: string | null;
   children?: ReactNode;
@@ -19,6 +23,7 @@ interface RoleFormProps {
 export function RoleForm({
   initialValues,
   isBuiltIn,
+  isLegacyCustomRoleUnconfigured = false,
   isSaving,
   error,
   children,
@@ -29,14 +34,18 @@ export function RoleForm({
 }: RoleFormProps) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<RoleFormErrors>({});
+  const sameScopes =
+    values.assignmentScopes.length === initialValues.assignmentScopes.length &&
+    values.assignmentScopes.every((scope) => initialValues.assignmentScopes.includes(scope));
   const isDirty =
     values.name !== initialValues.name ||
     values.description !== initialValues.description ||
-    values.rolePurpose !== initialValues.rolePurpose;
+    values.rolePurpose !== initialValues.rolePurpose ||
+    !sameScopes;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextErrors = validateRoleForm(values);
+    const nextErrors = validateRoleForm(values, !isBuiltIn);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
     await onSubmit({
@@ -88,23 +97,73 @@ export function RoleForm({
             }
           />
           {!isBuiltIn && (
-            <Select
-              label="Role purpose"
-              name="rolePurpose"
-              value={values.rolePurpose}
-              disabled={isSaving}
-              onChange={(event) =>
-                setValues((current) => ({
-                  ...current,
-                  rolePurpose: event.target.value as RoleFormValues['rolePurpose'],
-                }))
-              }
-              options={[
-                { value: 'GENERAL', label: 'General' },
-                { value: 'FINANCE_APPROVER', label: 'Finance Approver' },
-              ]}
-              helperText="Purpose is a backend-defined role classification."
-            />
+            <>
+              <Select
+                label="Role purpose"
+                name="rolePurpose"
+                value={values.rolePurpose}
+                disabled={isSaving}
+                onChange={(event) =>
+                  setValues((current) => ({
+                    ...current,
+                    rolePurpose: event.target.value as RoleFormValues['rolePurpose'],
+                  }))
+                }
+                options={[
+                  { value: 'GENERAL', label: 'General' },
+                  { value: 'FINANCE_APPROVER', label: 'Finance Approver' },
+                ]}
+                helperText="Purpose is a backend-defined role classification."
+              />
+              <fieldset className="role-form__scope-options" disabled={isSaving}>
+                <legend>Supported assignment scopes</legend>
+                <p>
+                  Administrators can assign this role at any selected scope. Finance Approver
+                  purpose does not restrict its supported scopes.
+                </p>
+                <Checkbox
+                  name="assignmentScopes"
+                  value="ORGANIZATION"
+                  label="Organization"
+                  checked={values.assignmentScopes.includes('ORGANIZATION')}
+                  disabled={isSaving}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      assignmentScopes: event.target.checked
+                        ? [...current.assignmentScopes, 'ORGANIZATION']
+                        : current.assignmentScopes.filter((scope) => scope !== 'ORGANIZATION'),
+                    }))
+                  }
+                />
+                <Checkbox
+                  name="assignmentScopes"
+                  value="DEPARTMENT"
+                  label="Department"
+                  checked={values.assignmentScopes.includes('DEPARTMENT')}
+                  disabled={isSaving}
+                  onChange={(event) =>
+                    setValues((current) => ({
+                      ...current,
+                      assignmentScopes: event.target.checked
+                        ? [...current.assignmentScopes, 'DEPARTMENT']
+                        : current.assignmentScopes.filter((scope) => scope !== 'DEPARTMENT'),
+                    }))
+                  }
+                />
+                {errors.assignmentScopes && (
+                  <p className="ui-field__message ui-field__message--error" role="alert">
+                    {errors.assignmentScopes}
+                  </p>
+                )}
+                {isLegacyCustomRoleUnconfigured && (
+                  <p className="ui-field__message">
+                    This legacy custom role is unconfigured. Select at least one scope before
+                    saving.
+                  </p>
+                )}
+              </fieldset>
+            </>
           )}
         </div>
       </section>

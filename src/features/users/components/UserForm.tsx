@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { Alert, Button, Card, Input, Select } from '@/components/ui';
 import type { Department } from '@/features/departments/types/department.types';
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
@@ -18,6 +19,8 @@ import {
   updateUserPayload,
   validateUserForm,
 } from '@/features/users/utils/user.utils';
+import { getRoleSupportedScopes } from '@/features/roles/utils/role.utils';
+import { APP_ROUTES } from '@/routes/route.constants';
 
 interface BaseUserFormProps {
   initialValues?: UserFormValues;
@@ -52,7 +55,7 @@ export function UserForm(props: UserFormProps) {
   const [values, setValues] = useState<UserFormValues>(props.initialValues ?? emptyValues);
   const [fieldErrors, setFieldErrors] = useState<UserFormErrors>({});
   const [roleId, setRoleId] = useState('');
-  const [scopeType, setScopeType] = useState<UserScopeType>('ORGANIZATION');
+  const [scopeType, setScopeType] = useState<UserScopeType | ''>('');
   const [roleDepartmentId, setRoleDepartmentId] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -63,16 +66,27 @@ export function UserForm(props: UserFormProps) {
 
   const selectedRole = props.roles.find((role) => role.id === roleId);
   const assignmentDepartmentId = scopeType === 'DEPARTMENT' ? roleDepartmentId : null;
-  const eligibleRoles = props.roles.filter((role) =>
-    canAssignRoleAtScope(props.actor, role, scopeType, assignmentDepartmentId),
-  );
   const availableDepartments = props.departments.filter(
     (department) => department.status === 'ACTIVE',
   );
+  const eligibleRoles = props.roles.filter((role) =>
+    getRoleSupportedScopes(role).some((scope) =>
+      scope === 'ORGANIZATION'
+        ? canAssignRoleAtScope(props.actor, role, scope, null)
+        : availableDepartments.some((department) =>
+            canAssignRoleAtScope(props.actor, role, scope, department.id),
+          ),
+    ),
+  );
+  const unconfiguredCustomRoles = props.roles.filter(
+    (role) => role.roleType === 'CUSTOM' && getRoleSupportedScopes(role).length === 0,
+  );
+  const selectedRoleScopes = selectedRole ? getRoleSupportedScopes(selectedRole) : [];
 
   function addRoleAssignment() {
     if (
       !selectedRole ||
+      !scopeType ||
       !canAssignRoleAtScope(props.actor, selectedRole, scopeType, assignmentDepartmentId)
     ) {
       setFieldErrors((current) => ({
@@ -103,6 +117,15 @@ export function UserForm(props: UserFormProps) {
       return next;
     });
     setRoleId('');
+    setScopeType('');
+    setRoleDepartmentId('');
+  }
+
+  function selectRole(nextRoleId: string) {
+    const role = props.roles.find((item) => item.id === nextRoleId);
+    const scopes = role ? getRoleSupportedScopes(role) : [];
+    setRoleId(nextRoleId);
+    setScopeType(scopes.length === 1 ? (scopes[0] ?? '') : '');
     setRoleDepartmentId('');
   }
 
@@ -203,6 +226,18 @@ export function UserForm(props: UserFormProps) {
               {props.referenceError} You can still create the user without assigning a department.
             </Alert>
           )}
+          {unconfiguredCustomRoles.length > 0 && (
+            <Alert variant="warning" title="Some custom roles require configuration">
+              These custom roles cannot be assigned until an assignment scope is configured:
+              <ul>
+                {unconfiguredCustomRoles.map((role) => (
+                  <li key={role.id}>
+                    <Link to={`${APP_ROUTES.roles}/${role.id}/edit`}>{role.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
           {props.roles.length === 0 ? (
             <p className="user-form__note">No assignable roles are available.</p>
           ) : (
@@ -213,24 +248,32 @@ export function UserForm(props: UserFormProps) {
                   name="roleId"
                   value={roleId}
                   placeholder="Select a role"
-                  onChange={(event) => setRoleId(event.target.value)}
+                  onChange={(event) => selectRole(event.target.value)}
                   options={[...eligibleRoles.map((role) => ({ value: role.id, label: role.name }))]}
+                  helperText="Choose a role first; its supported assignment scopes will be shown."
                   disabled={props.isSubmitting || Boolean(props.roleOptionsError)}
                 />
-                <Select
-                  label="Assignment scope"
-                  name="scopeType"
-                  value={scopeType}
-                  onChange={(event) => {
-                    setScopeType(event.target.value as UserScopeType);
-                    setRoleDepartmentId('');
-                  }}
-                  options={[
-                    { value: 'ORGANIZATION', label: 'Organization' },
-                    { value: 'DEPARTMENT', label: 'Department' },
-                  ]}
-                  disabled={props.isSubmitting || Boolean(props.roleOptionsError)}
-                />
+                {selectedRoleScopes.length > 1 ? (
+                  <Select
+                    label="Assignment scope"
+                    name="scopeType"
+                    value={scopeType}
+                    placeholder="Choose a supported scope"
+                    onChange={(event) => {
+                      setScopeType(event.target.value as UserScopeType);
+                      setRoleDepartmentId('');
+                    }}
+                    options={selectedRoleScopes.map((scope) => ({
+                      value: scope,
+                      label: scope === 'ORGANIZATION' ? 'Organization' : 'Department',
+                    }))}
+                    disabled={props.isSubmitting || Boolean(props.roleOptionsError)}
+                  />
+                ) : selectedRoleScopes.length === 1 ? (
+                  <p className="user-form__note">
+                    Assignment scope: {selectedRoleScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
+                  </p>
+                ) : null}
                 {scopeType === 'DEPARTMENT' && (
                   <Select
                     label="Role department"
@@ -254,6 +297,7 @@ export function UserForm(props: UserFormProps) {
                   disabled={
                     props.isSubmitting ||
                     !roleId ||
+                    !scopeType ||
                     (scopeType === 'DEPARTMENT' && !roleDepartmentId) ||
                     Boolean(props.roleOptionsError)
                   }

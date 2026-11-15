@@ -23,13 +23,16 @@ import { APP_ROUTES } from '@/routes/route.constants';
 import { useAuditLogs, useAuditStatistics } from '../hooks/useAuditLogs';
 import { auditLogService } from '../services/audit-log.service';
 import type { AuditListParams } from '../types/audit-log.types';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export function AuditLogsPage() {
   const { user, authorizationStatus } = useAuth();
   const canView = Boolean(
     user && hasPermission(user.authorization, 'audit_logs.view', 'organization-or-department'),
   );
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput.trim(), 300);
+  const search = searchInput.trim() ? debouncedSearch : '';
   const [action, setAction] = useState('');
   const [resourceType, setResourceType] = useState('');
   const [page, setPage] = useState(1);
@@ -126,9 +129,9 @@ export function AuditLogsPage() {
             label="Search"
             name="audit-search"
             placeholder="Action or resource ID"
-            value={search}
+            value={searchInput}
             onChange={(event) => {
-              setSearch(event.target.value);
+              setSearchInput(event.target.value);
               setPage(1);
             }}
           />

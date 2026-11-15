@@ -19,6 +19,7 @@ const initialValues: RoleFormValues = {
   name: '',
   description: '',
   rolePurpose: 'GENERAL',
+  assignmentScopes: [],
 };
 
 export function RoleCreatePage() {
@@ -53,6 +54,7 @@ export function RoleCreatePage() {
         ...values,
         name: values.name.trim(),
         description: values.description.trim(),
+        assignmentScopes: values.assignmentScopes,
         permissions,
       });
       showToast({

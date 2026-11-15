@@ -232,9 +232,10 @@ async function fetchUsersWithRole(roleId: string): Promise<CandidateUser[]> {
 }
 
 export const departmentService = {
-  async list(params: DepartmentListParams): Promise<DepartmentListResponse> {
+  async list(params: DepartmentListParams, signal?: AbortSignal): Promise<DepartmentListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/departments', {
       params: toListParams(params),
+      ...(signal ? { signal } : {}),
     });
     return assertApiData(response, isDepartmentListResponse);
   },

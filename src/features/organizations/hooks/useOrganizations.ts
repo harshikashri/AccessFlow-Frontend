@@ -28,7 +28,7 @@ async function invalidateOrganizationData(
 export function useOrganizationList(userId: string, params: OrganizationListParams) {
   return useQuery({
     queryKey: organizationQueryKeys.list(userId, params),
-    queryFn: () => organizationService.list(params),
+    queryFn: ({ signal }) => organizationService.list(params, signal),
     enabled: userId.length > 0,
   });
 }
@@ -45,7 +45,7 @@ export function useOrganizationSummary(userId: string) {
   const queries = useQueries({
     queries: summaryParams.map((params) => ({
       queryKey: organizationQueryKeys.list(userId, params),
-      queryFn: () => organizationService.list(params),
+      queryFn: ({ signal }) => organizationService.list(params, signal),
       enabled: userId.length > 0,
     })),
   });

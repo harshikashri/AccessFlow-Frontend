@@ -37,6 +37,10 @@ function isPermissionId(value: unknown): value is PermissionId {
   return typeof value === 'string' && permissionIds.has(value);
 }
 
+function isScope(value: unknown): value is 'ORGANIZATION' | 'DEPARTMENT' {
+  return value === 'ORGANIZATION' || value === 'DEPARTMENT';
+}
+
 function isRoleType(value: unknown): value is UserRole['roleType'] {
   return (
     value === 'CUSTOM' ||
@@ -56,6 +60,14 @@ function isRole(value: unknown): value is ManagedRole {
     typeof value.description === 'string' &&
     isRoleType(value.roleType) &&
     (value.rolePurpose === 'GENERAL' || value.rolePurpose === 'FINANCE_APPROVER') &&
+    (value.assignmentScope === undefined ||
+      value.assignmentScope === null ||
+      value.assignmentScope === 'ORGANIZATION' ||
+      value.assignmentScope === 'DEPARTMENT') &&
+    (value.assignmentScopes === undefined ||
+      (Array.isArray(value.assignmentScopes) &&
+        value.assignmentScopes.every(isScope) &&
+        new Set(value.assignmentScopes).size === value.assignmentScopes.length)) &&
     Array.isArray(value.permissions) &&
     value.permissions.every(isPermissionId) &&
     new Set(value.permissions).size === value.permissions.length &&
@@ -203,9 +215,10 @@ function assertRole(response: AxiosResponse<unknown>): ManagedRole {
 }
 
 export const roleService = {
-  async list(params: RoleListParams): Promise<RoleListResponse> {
+  async list(params: RoleListParams, signal?: AbortSignal): Promise<RoleListResponse> {
     const response = await apiClient.get<ApiEnvelope<unknown>>('/roles', {
       params: toListParams(params),
+      ...(signal ? { signal } : {}),
     });
     return assertApiData(response, isRoleList);
   },

@@ -3,6 +3,7 @@ import {
   hasOrganizationPermission,
 } from '@/features/authorization/permissions';
 import type { PermissionId } from '@/features/authorization/permission-catalog';
+import { getRoleSupportedScopes } from '@/features/roles/utils/role.utils';
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
 import type {
   CreateUserRequest,
@@ -72,13 +73,7 @@ export function canAssignRoleAtScope(
   scopeType: UserScopeType,
   departmentId: string | null,
 ): boolean {
-  if (role.roleType === 'ORGANIZATION_ADMIN' && scopeType !== 'ORGANIZATION') return false;
-  if (
-    (role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER') &&
-    scopeType !== 'DEPARTMENT'
-  ) {
-    return false;
-  }
+  if (!getRoleSupportedScopes(role).includes(scopeType)) return false;
   if (scopeType === 'DEPARTMENT' && !departmentId) return false;
 
   const hasPermission = (permission: PermissionId) =>

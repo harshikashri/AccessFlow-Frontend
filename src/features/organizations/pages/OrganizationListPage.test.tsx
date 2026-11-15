@@ -146,6 +146,7 @@ describe('OrganizationListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ search: 'Acme', page: 1 }),
+        expect.any(AbortSignal),
       ),
     );
 
@@ -153,6 +154,7 @@ describe('OrganizationListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: 'ACTIVE', page: 1 }),
+        expect.any(AbortSignal),
       ),
     );
 
@@ -160,6 +162,7 @@ describe('OrganizationListPage', () => {
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
         expect.objectContaining({ status: 'ACTIVE', search: 'Acme', page: 2 }),
+        expect.any(AbortSignal),
       ),
     );
   });

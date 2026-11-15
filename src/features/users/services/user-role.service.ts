@@ -36,6 +36,10 @@ function isRoleType(value: unknown): value is UserRole['roleType'] {
   );
 }
 
+function isScope(value: unknown): value is 'ORGANIZATION' | 'DEPARTMENT' {
+  return value === 'ORGANIZATION' || value === 'DEPARTMENT';
+}
+
 function isRole(value: unknown): value is UserRole {
   return (
     isRecord(value) &&
@@ -45,6 +49,14 @@ function isRole(value: unknown): value is UserRole {
     typeof value.description === 'string' &&
     isRoleType(value.roleType) &&
     typeof value.rolePurpose === 'string' &&
+    (value.assignmentScope === undefined ||
+      value.assignmentScope === null ||
+      value.assignmentScope === 'ORGANIZATION' ||
+      value.assignmentScope === 'DEPARTMENT') &&
+    (value.assignmentScopes === undefined ||
+      (Array.isArray(value.assignmentScopes) &&
+        value.assignmentScopes.every(isScope) &&
+        new Set(value.assignmentScopes).size === value.assignmentScopes.length)) &&
     Array.isArray(value.permissions) &&
     value.permissions.every(
       (permission) => typeof permission === 'string' && permissionIds.has(permission),
