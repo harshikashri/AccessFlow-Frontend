@@ -154,7 +154,15 @@ export function ApprovalInboxPage() {
                           <span>{step.request?.title || 'Request details'}</span>
                         </Link>
                       </TableCell>
-                      <TableCell>{step.stageName}</TableCell>
+                      <TableCell>
+                        <div className="approval-stage-summary">
+                          <strong>{step.stageName}</strong>
+                          <span>
+                            Approver:{' '}
+                            {step.approverRoleName || step.approverType.replaceAll('_', ' ')}
+                          </span>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`approval-status approval-status--${step.status.toLowerCase()}`}

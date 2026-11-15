@@ -65,10 +65,20 @@ function isRequest(value: unknown): value is RequestSummary {
   );
 }
 
+function normalizeRequest(value: unknown): RequestSummary | null {
+  if (!isRecord(value)) return null;
+  const id =
+    typeof value.id === 'string' ? value.id : typeof value._id === 'string' ? value._id : null;
+  if (!id) return null;
+  const normalized = { ...value, id };
+  return isRequest(normalized) ? normalized : null;
+}
+
 function assertRequest(response: AxiosResponse<unknown>): RequestSummary {
   const data = getData(response);
-  if (!isRequest(data)) throw new Error('The request API returned an unsupported response.');
-  return data;
+  const request = normalizeRequest(data);
+  if (!request) throw new Error('The request API returned an unsupported response.');
+  return request;
 }
 
 function toParams(params: RequestListParams): Record<string, string> {
@@ -113,12 +123,15 @@ export const requestService = {
     const data = assertRecord(response);
     if (
       !Array.isArray(data.items) ||
-      !data.items.every(isRequest) ||
+      !data.items.every((item) => normalizeRequest(item) !== null) ||
       !isPagination(data.pagination)
     ) {
       throw new Error('The request API returned an unsupported response.');
     }
-    return { items: data.items, pagination: data.pagination };
+    return {
+      items: data.items.map((item) => normalizeRequest(item) as RequestSummary),
+      pagination: data.pagination,
+    };
   },
 
   async get(requestId: string): Promise<RequestSummary> {

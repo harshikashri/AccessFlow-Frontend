@@ -52,7 +52,9 @@ export function OrganizationForm(props: OrganizationFormProps) {
     event.preventDefault();
     const errors = validateOrganizationForm(values, props.mode === 'create');
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
     if (props.mode === 'create') {
       void props.onSubmit(createOrganizationPayload(values));
@@ -90,7 +92,7 @@ export function OrganizationForm(props: OrganizationFormProps) {
       {props.mode === 'create' && (
         <Card
           title="Initial organization administrator"
-          description="The backend creates this administrator and its organization membership as part of organization creation."
+          description="The backend creates this administrator and membership together with the organization. After creation, password instructions are requested for the administrator email."
           className="organization-form__section"
         >
           <div className="organization-form__fields">
@@ -126,7 +128,7 @@ export function OrganizationForm(props: OrganizationFormProps) {
               onChange={(event) => updateField('adminPassword', event.target.value)}
               required
               minLength={10}
-              helperText="At least 10 characters with lowercase, uppercase, number, and special character."
+              helperText="At least 10 characters with lowercase, uppercase, number, and special character. Example: Alex@2004!"
               {...(fieldErrors.adminPassword ? { error: fieldErrors.adminPassword } : {})}
               disabled={props.isSubmitting}
             />

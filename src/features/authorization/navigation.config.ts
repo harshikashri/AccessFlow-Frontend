@@ -17,6 +17,7 @@ export type NavigationIcon =
   | 'settings';
 
 export type NavigationRequirement =
+  | { kind: 'authenticated' }
   | { kind: 'platform-session' }
   | {
       kind: 'permissions';
@@ -64,6 +65,15 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         description: 'A future home for platform-level operations.',
         section: 'Platform',
         path: APP_ROUTES.dashboard,
+        requirement: { kind: 'platform-session' },
+      },
+      {
+        id: 'platform-audit-logs',
+        label: 'Audit logs',
+        icon: 'audit',
+        description: 'Review platform audit activity.',
+        section: 'Platform',
+        path: APP_ROUTES.auditLogs,
         requirement: { kind: 'platform-session' },
       },
       {
@@ -136,7 +146,7 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         id: 'workflows',
         label: 'Workflows',
         icon: 'workflows',
-        description: 'Workflow management is a planned feature; no workflow data is loaded here.',
+        description: 'Define approval sequences for organization request types.',
         section: 'Organization',
         path: APP_ROUTES.workflows,
         requirement: permissionRequirement('workflows.view', 'organization'),
@@ -145,10 +155,25 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         id: 'audit-logs',
         label: 'Audit logs',
         icon: 'audit',
-        description: 'Audit history is a planned feature; no audit data is loaded here.',
+        description: 'Review authorized activity across the organization.',
         section: 'Organization',
         path: APP_ROUTES.auditLogs,
         requirement: permissionRequirement('audit_logs.view', 'organization-or-department'),
+      },
+    ],
+  },
+  {
+    id: 'account',
+    label: 'Account',
+    items: [
+      {
+        id: 'settings',
+        label: 'Settings',
+        icon: 'settings',
+        description: 'Manage your profile, preferences, notifications, and sessions.',
+        section: 'Account',
+        path: APP_ROUTES.settings,
+        requirement: { kind: 'authenticated' },
       },
     ],
   },

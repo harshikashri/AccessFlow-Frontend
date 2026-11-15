@@ -103,7 +103,7 @@ export function isDashboardWidgetAuthorized(
     case 'APPROVAL_ACTIVITY':
       return hasScopedPermission(user, 'requests.approve');
     case 'USER_STATISTICS':
-      return hasScopedPermission(user, 'users.view');
+      return hasOrganizationPermission(user.authorization, 'users.view');
     case 'DEPARTMENT_OVERVIEW':
       return hasScopedPermission(user, 'departments.view');
     case 'ROLE_OVERVIEW':

@@ -30,6 +30,7 @@ interface AssignedUsersTableProps {
   canViewProfiles: boolean;
   isRemoving: boolean;
   onRemove: (assignment: RoleUserAssignment) => void;
+  onEdit: (assignment: RoleUserAssignment) => void;
   onPageChange: (page: number) => void;
 }
 
@@ -41,6 +42,7 @@ export function AssignedUsersTable({
   canViewProfiles,
   isRemoving,
   onRemove,
+  onEdit,
   onPageChange,
 }: AssignedUsersTableProps) {
   return (
@@ -93,22 +95,19 @@ export function AssignedUsersTable({
                 <TableCell>{formatDate(assignment.assignedAt)}</TableCell>
                 <TableCell>
                   {canManage && assignment.status === 'ACTIVE' ? (
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={
-                        isRemoving ||
-                        (assignment.scopeType === 'DEPARTMENT' && !assignment.departmentId)
-                      }
-                      title={
-                        assignment.scopeType === 'DEPARTMENT' && !assignment.departmentId
-                          ? 'Cannot remove this assignment because its department is unavailable.'
-                          : undefined
-                      }
-                      onClick={() => onRemove(assignment)}
-                    >
-                      Remove
-                    </Button>
+                    <div className="role-table__actions">
+                      <Button size="sm" variant="outline" onClick={() => onEdit(assignment)}>
+                        Change scope
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={isRemoving}
+                        onClick={() => onRemove(assignment)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
                   ) : (
                     '—'
                   )}

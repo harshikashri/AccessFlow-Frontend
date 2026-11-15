@@ -13,6 +13,8 @@ export function useApprovalInbox(
     queryKey: approvalQueryKeys.inbox(userId, organizationId, params),
     queryFn: () => approvalService.list(params),
     enabled: enabled && Boolean(userId && organizationId),
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
   });
 }
 

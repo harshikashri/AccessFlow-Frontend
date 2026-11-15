@@ -84,6 +84,14 @@
   font-size: 0.875rem;
 }
 
+.request-directory .ui-table {
+  min-width: 62rem;
+}
+
+.request-directory .ui-table__cell--header {
+  white-space: nowrap;
+}
+
 .request-form-fields {
   display: grid;
   gap: 1.25rem;

@@ -34,7 +34,8 @@ function normalizeStep(value: unknown): ApprovalStep | null {
     !id ||
     typeof value.requestId !== 'string' ||
     typeof value.status !== 'string' ||
-    typeof value.stageName !== 'string'
+    typeof value.stageName !== 'string' ||
+    typeof value.approverType !== 'string'
   ) {
     return null;
   }

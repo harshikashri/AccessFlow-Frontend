@@ -3,7 +3,12 @@ import { apiClient } from '@/services/api/api-client';
 import type { ApiEnvelope } from '@/features/auth/types/auth.types';
 import { PERMISSION_IDS } from '@/features/authorization/permission-catalog';
 import type { PermissionId } from '@/features/authorization/permission-catalog';
-import type { UserRole, UserStatus } from '@/features/users/types/user.types';
+import type {
+  UpdateUserRoleAssignmentRequest,
+  UserRole,
+  UserRoleAssignment,
+  UserStatus,
+} from '@/features/users/types/user.types';
 import type {
   AssignmentPagination,
   CreateRoleRequest,
@@ -252,5 +257,16 @@ export const roleService = {
       { params: { page: String(page), limit: String(limit) } },
     );
     return assertApiData(response, isRoleUserList);
+  },
+
+  async updateAssignment(
+    assignmentId: string,
+    payload: UpdateUserRoleAssignmentRequest,
+  ): Promise<UserRoleAssignment> {
+    const response = await apiClient.patch<ApiEnvelope<unknown>>(
+      `/roles/assignments/${encodeURIComponent(assignmentId)}`,
+      payload,
+    );
+    return assertApiData(response, isRoleAssignment);
   },
 };

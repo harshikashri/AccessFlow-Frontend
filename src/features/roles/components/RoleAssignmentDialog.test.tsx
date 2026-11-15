@@ -124,4 +124,30 @@ describe('RoleAssignmentDialog', () => {
     await user.click(assignButton);
     expect(onAssign).not.toHaveBeenCalled();
   });
+
+  it('defaults Finance Approver assignments to department scope only', () => {
+    const financeRole: ManagedRole = {
+      ...role,
+      name: 'Finance Approver',
+      rolePurpose: 'FINANCE_APPROVER',
+    };
+
+    render(
+      <RoleAssignmentDialog
+        open
+        role={financeRole}
+        isSaving={false}
+        onOpenChange={vi.fn()}
+        onAssign={vi.fn()}
+      />,
+    );
+
+    const scope = screen.getByLabelText('Assignment scope') as HTMLSelectElement;
+    expect(scope.value).toBe('DEPARTMENT');
+    expect(
+      Array.from(scope.options)
+        .map((option) => option.value)
+        .filter(Boolean),
+    ).toEqual(['DEPARTMENT']);
+  });
 });

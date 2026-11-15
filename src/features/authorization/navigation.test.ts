@@ -35,7 +35,11 @@ describe('permission-aware navigation', () => {
       'SUPER_ADMIN',
     );
 
-    expect(getVisibleItemIds(user, 'available')).toEqual(['platform-dashboard', 'organizations']);
+    expect(getVisibleItemIds(user, 'available')).toEqual([
+      'platform-dashboard',
+      'platform-audit-logs',
+      'organizations',
+    ]);
   });
 
   it('filters organization navigation by the exact granted permissions', () => {
@@ -45,7 +49,12 @@ describe('permission-aware navigation', () => {
       departmentPermissions: {},
     });
 
-    expect(getVisibleItemIds(user, 'available')).toEqual(['dashboard', 'roles', 'workflows']);
+    expect(getVisibleItemIds(user, 'available')).toEqual([
+      'dashboard',
+      'roles',
+      'workflows',
+      'settings',
+    ]);
   });
 
   it('exposes custom department grants without treating them as organization-wide access', () => {
@@ -60,6 +69,7 @@ describe('permission-aware navigation', () => {
     expect(getVisibleItemIds(user, 'available')).toEqual([
       'users',
       'audit-logs',
+      'settings',
       'request-center',
       'request-list',
       'my-requests',
@@ -73,7 +83,7 @@ describe('permission-aware navigation', () => {
       departmentPermissions: {},
     });
 
-    expect(getVisibleItemIds(user, 'available')).toEqual(['users-create']);
+    expect(getVisibleItemIds(user, 'available')).toEqual(['users-create', 'settings']);
   });
 
   it('hides navigation until authorization is available and for an empty profile', () => {
@@ -85,6 +95,6 @@ describe('permission-aware navigation', () => {
 
     expect(getVisibleNavigation(emptyUser, 'loading')).toEqual([]);
     expect(getVisibleNavigation(emptyUser, 'unavailable')).toEqual([]);
-    expect(getVisibleNavigation(emptyUser, 'available')).toEqual([]);
+    expect(getVisibleItemIds(emptyUser, 'available')).toEqual(['settings']);
   });
 });

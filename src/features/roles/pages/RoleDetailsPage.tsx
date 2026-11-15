@@ -11,6 +11,7 @@ import { hasOrganizationPermission } from '@/features/authorization/permissions'
 import { AssignedUsersTable } from '@/features/roles/components/AssignedUsersTable';
 import { PermissionMatrix } from '@/features/roles/components/PermissionMatrix';
 import { RoleAssignmentDialog } from '@/features/roles/components/RoleAssignmentDialog';
+import { RoleAssignmentScopeDialog } from '@/features/roles/components/RoleAssignmentScopeDialog';
 import { RoleOverview } from '@/features/roles/components/RoleOverview';
 import {
   useAssignRole,
@@ -19,6 +20,7 @@ import {
   useRoleDetails,
   useRoleUsers,
   useSetRoleStatus,
+  useUpdateRoleAssignment,
 } from '@/features/roles/hooks/useRoles';
 import type { RoleStatus, RoleUserAssignment } from '@/features/roles/types/role.types';
 import { isBuiltInRole, isRoleId } from '@/features/roles/utils/role.utils';
@@ -35,6 +37,7 @@ export function RoleDetailsPage() {
   const [statusToSet, setStatusToSet] = useState<RoleStatus | null>(null);
   const [assignmentToRemove, setAssignmentToRemove] = useState<RoleUserAssignment | null>(null);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [assignmentToEdit, setAssignmentToEdit] = useState<RoleUserAssignment | null>(null);
   const organizationId = user?.organizationId ?? '';
   const canView = Boolean(user && hasOrganizationPermission(user.authorization, 'roles.view'));
   const canEdit = Boolean(user && hasOrganizationPermission(user.authorization, 'roles.edit'));
@@ -58,6 +61,7 @@ export function RoleDetailsPage() {
   const setStatus = useSetRoleStatus(actorId, organizationId, roleId);
   const assignRole = useAssignRole(actorId, organizationId, roleId);
   const removeAssignment = useRemoveRoleAssignment(actorId, organizationId);
+  const updateAssignment = useUpdateRoleAssignment(actorId, organizationId);
 
   if (authorizationStatus === 'loading') {
     return <LoadingState label="Checking role access" />;
@@ -291,14 +295,10 @@ export function RoleDetailsPage() {
             canViewProfiles={canViewUserProfiles}
             isRemoving={removeAssignment.isPending}
             onRemove={setAssignmentToRemove}
+            onEdit={setAssignmentToEdit}
             onPageChange={setPage}
           />
         )}
-        <p className="role-page__scope-note">
-          Assignment scope cannot be edited through the current backend API. To change it, remove
-          the old assignment and create a new one separately; this page will not automate that
-          non-atomic sequence.
-        </p>
       </Card>
 
       <RoleAssignmentDialog
@@ -307,6 +307,29 @@ export function RoleDetailsPage() {
         isSaving={assignRole.isPending}
         onOpenChange={setAssignmentDialogOpen}
         onAssign={submitAssignment}
+      />
+
+      <RoleAssignmentScopeDialog
+        open={assignmentToEdit !== null}
+        role={currentRole}
+        assignment={assignmentToEdit}
+        actorId={actorId}
+        organizationId={organizationId}
+        isSaving={updateAssignment.isPending}
+        onOpenChange={(open) => {
+          if (!updateAssignment.isPending && !open) setAssignmentToEdit(null);
+        }}
+        onUpdate={async (payload) => {
+          if (!assignmentToEdit) return;
+          await updateAssignment.mutateAsync({ assignmentId: assignmentToEdit.id, payload });
+          setAssignmentToEdit(null);
+          showToast({
+            title: 'Assignment scope updated',
+            description: 'The existing assignment was updated atomically.',
+            variant: 'success',
+          });
+          if (assignmentToEdit.userId === currentUser.id) await refreshAccessAfterSave();
+        }}
       />
 
       <Modal

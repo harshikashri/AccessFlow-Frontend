@@ -21,5 +21,10 @@ export const APP_ROUTES = Object.freeze({
   auditLogs: '/audit-logs',
   profile: '/profile',
   settings: '/settings',
+  settingsProfile: '/settings/profile',
+  settingsPreferences: '/settings/preferences',
+  settingsNotifications: '/settings/notifications',
+  settingsSecurity: '/settings/security',
+  settingsOrganization: '/settings/organization',
   forbidden: '/403',
 });

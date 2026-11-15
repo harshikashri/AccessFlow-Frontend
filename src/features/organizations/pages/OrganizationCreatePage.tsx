@@ -5,6 +5,7 @@ import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
+import { authService } from '@/features/auth/services/auth.service';
 import { isPlatformSession } from '@/features/authorization/navigation';
 import { OrganizationForm } from '@/features/organizations/components/OrganizationForm';
 import { useCreateOrganization } from '@/features/organizations/hooks/useOrganizations';
@@ -21,10 +22,24 @@ function OrganizationCreateContent({ userId }: { userId: string }) {
     setFormError(null);
     try {
       const result = await createOrganization.mutateAsync(payload);
+      let emailDescription = 'Password instructions were requested for the initial administrator.';
+      try {
+        await authService.forgotPassword(result.admin.email);
+      } catch (emailError) {
+        const emailMessage = getAuthErrorMessage(
+          emailError,
+          'Password instructions could not be sent.',
+        );
+        emailDescription = `The organization was created, but the password email could not be sent: ${emailMessage}`;
+      }
       showToast({
-        title: 'Organization created',
-        description: `${result.organization.name} and its initial administrator were created.`,
-        variant: 'success',
+        title: emailDescription.startsWith('The organization was created')
+          ? 'Organization created with email warning'
+          : 'Organization created',
+        description: `${result.organization.name} and its initial administrator were created. ${emailDescription}`,
+        variant: emailDescription.startsWith('The organization was created')
+          ? 'warning'
+          : 'success',
       });
       navigate(`${APP_ROUTES.organizations}/${result.organization.id}`, { replace: true });
     } catch (error) {

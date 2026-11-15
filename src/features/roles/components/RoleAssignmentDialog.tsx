@@ -29,7 +29,9 @@ interface RoleAssignmentDialogProps {
 
 function getDefaultScope(role: ManagedRole): UserScopeType {
   if (role.roleType === 'ORGANIZATION_ADMIN') return 'ORGANIZATION';
-  if (role.roleType === 'DEPARTMENT_MANAGER') return 'DEPARTMENT';
+  if (role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER') {
+    return 'DEPARTMENT';
+  }
   return 'ORGANIZATION';
 }
 
@@ -125,7 +127,7 @@ export function RoleAssignmentDialog({
   const scopeOptions =
     role.roleType === 'ORGANIZATION_ADMIN'
       ? [{ value: 'ORGANIZATION', label: 'Organization' }]
-      : role.roleType === 'DEPARTMENT_MANAGER'
+      : role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER'
         ? [{ value: 'DEPARTMENT', label: 'Department' }]
         : [
             { value: 'ORGANIZATION', label: 'Organization' },
@@ -151,7 +153,11 @@ export function RoleAssignmentDialog({
     <Modal
       open={open}
       title={`Assign ${role.name}`}
-      description="The backend validates active membership, organization scope, role compatibility, and your permission scope."
+      description={
+        role.rolePurpose === 'FINANCE_APPROVER'
+          ? 'Finance Approver assignments must be limited to a department. The backend also checks active membership and permission scope.'
+          : 'The backend validates active membership, organization scope, role compatibility, and your permission scope.'
+      }
       onOpenChange={(nextOpen) => {
         if (!isSaving) onOpenChange(nextOpen);
       }}

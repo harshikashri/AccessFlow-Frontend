@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
+import type { UserRole } from '@/features/users/types/user.types';
 import {
+  canAssignRoleAtScope,
   canAssignUserToDepartment,
   canEditUserScope,
   canViewUserScope,
@@ -76,5 +78,24 @@ describe('user utilities', () => {
     });
     expect(getUserStatusLabel('INACTIVE', true)).toBe('Setup pending');
     expect(getUserStatusLabel('INACTIVE')).toBe('Account inactive');
+  });
+
+  it('only allows Finance Approver roles to be assigned at department scope', () => {
+    const actor = createActor(['requests.approve'], {});
+    const financeRole: UserRole = {
+      id: otherDepartmentId,
+      organizationId: actor.organizationId ?? '',
+      name: 'Finance Approver',
+      description: '',
+      roleType: 'CUSTOM' as const,
+      rolePurpose: 'FINANCE_APPROVER' as const,
+      permissions: ['requests.approve'],
+      status: 'ACTIVE',
+      createdAt: '',
+      updatedAt: '',
+    };
+
+    expect(canAssignRoleAtScope(actor, financeRole, 'ORGANIZATION', null)).toBe(false);
+    expect(canAssignRoleAtScope(actor, financeRole, 'DEPARTMENT', departmentId)).toBe(true);
   });
 });

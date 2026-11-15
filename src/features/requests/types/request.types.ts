@@ -131,7 +131,7 @@ export interface RequestListParams {
 }
 
 export interface RequestInput {
-  departmentId: string;
+  departmentId?: string;
   requestTypeId: string;
   title: string;
   description: string;

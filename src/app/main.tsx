@@ -12,6 +12,7 @@ import '@/styles/users.css';
 import '@/styles/roles.css';
 import '@/styles/requests.css';
 import '@/styles/approvals.css';
+import '@/styles/audit-settings.css';
 
 const rootElement = document.getElementById('root');
 

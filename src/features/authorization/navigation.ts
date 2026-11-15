@@ -14,6 +14,7 @@ function canAccessRequirement(
 ): boolean {
   if (!user || !isAuthorizationInfo(user.authorization)) return false;
   if (!requirement) return false;
+  if (requirement.kind === 'authenticated') return Boolean(user);
   if (requirement.kind === 'platform-session') return isPlatformSession(user);
   if (isPlatformSession(user)) return false;
 
