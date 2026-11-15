@@ -18,6 +18,7 @@ const serviceMocks = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   setStatus: vi.fn(),
+  forgotPassword: vi.fn(),
 }));
 
 vi.mock('@/features/organizations/services/organization.service', () => ({
@@ -27,6 +28,12 @@ vi.mock('@/features/organizations/services/organization.service', () => ({
     create: serviceMocks.create,
     update: serviceMocks.update,
     setStatus: serviceMocks.setStatus,
+  },
+}));
+
+vi.mock('@/features/auth/services/auth.service', () => ({
+  authService: {
+    forgotPassword: serviceMocks.forgotPassword,
   },
 }));
 
@@ -124,6 +131,7 @@ describe('organization create, edit, and details flows', () => {
   it('validates required creation fields and navigates to the created organization', async () => {
     const user = userEvent.setup();
     serviceMocks.create.mockResolvedValue(createResult);
+    serviceMocks.forgotPassword.mockResolvedValue('Password instructions requested');
     renderRoutes('/organizations/new');
 
     await user.click(screen.getByRole('button', { name: 'Create organization' }));
@@ -156,6 +164,7 @@ describe('organization create, edit, and details flows', () => {
         password: 'StrongPass!1',
       },
     });
+    expect(serviceMocks.forgotPassword).toHaveBeenCalledWith('jane@example.com');
   });
 
   it('prepopulates and saves only the supported organization name field', async () => {

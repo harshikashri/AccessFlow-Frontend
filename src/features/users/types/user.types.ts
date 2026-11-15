@@ -132,6 +132,11 @@ export interface RemoveUserRoleAssignmentRequest {
   departmentId?: string;
 }
 
+export interface UpdateUserRoleAssignmentRequest {
+  scopeType: UserScopeType;
+  departmentId?: string;
+}
+
 export interface UserRoleAssignmentList {
   items: UserRoleAssignment[];
   pagination: {

@@ -66,11 +66,28 @@ export function ApprovalDetailsPage() {
   const department =
     request.departmentId && typeof request.departmentId === 'object' ? request.departmentId : null;
   const isClaimedByMe = approval.claimedBy === user.id;
+  const approverName =
+    approval.approverType === 'ROLE'
+      ? approval.approverRoleName || 'Configured role'
+      : approval.approverType.replaceAll('_', ' ');
   const canClaim =
     approval.status === 'ACTIVE' &&
     approval.assignmentResolution === 'CLAIM_ONE' &&
     !approval.claimedBy;
-  const canAct = approval.status === 'ACTIVE' || isClaimedByMe;
+  const canAct =
+    approval.assignmentResolution !== 'CLAIM_ONE'
+      ? approval.status === 'ACTIVE' || (approval.status === 'CLAIMED' && isClaimedByMe)
+      : approval.status === 'CLAIMED' && isClaimedByMe;
+
+  async function claimCurrentApproval() {
+    setError(null);
+    try {
+      await claim.mutateAsync(approval.id);
+    } catch (claimError) {
+      setError(getAuthErrorMessage(claimError, 'The approval could not be claimed.'));
+      void query.refetch();
+    }
+  }
 
   async function execute() {
     if (!action || (action !== 'approve' && !comment.trim())) return;
@@ -158,6 +175,10 @@ export function ApprovalDetailsPage() {
               <dd>{approval.stageName}</dd>
             </div>
             <div>
+              <dt>Approver</dt>
+              <dd>{approverName}</dd>
+            </div>
+            <div>
               <dt>Status</dt>
               <dd>{approval.status}</dd>
             </div>
@@ -178,11 +199,11 @@ export function ApprovalDetailsPage() {
           </dl>
           <div className="approval-actions">
             {canClaim && (
-              <Button onClick={() => void claim.mutateAsync(approval.id)} loading={claim.isPending}>
+              <Button onClick={() => void claimCurrentApproval()} loading={claim.isPending}>
                 Claim approval
               </Button>
             )}
-            {isClaimedByMe && <span className="approval-claim-note">Claimed by you</span>}
+            {isClaimedByMe && canAct && <span className="approval-claim-note">Claimed by you</span>}
             {canAct && (
               <>
                 <Button onClick={() => setAction('approve')}>Approve</Button>

@@ -6,7 +6,6 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import { hasPermission } from '@/features/authorization/permissions';
-import { useUserDepartmentOptions } from '@/features/users/hooks/useUsers';
 import { APP_ROUTES } from '@/routes/route.constants';
 import { DynamicRequestForm } from '../components/DynamicRequestForm';
 import {
@@ -47,9 +46,7 @@ export function RequestCreatePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [selectedTypeId, setSelectedTypeId] = useState(searchParams.get('type') ?? '');
-  const [departmentId, setDepartmentId] = useState('');
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<RequestPriority>('MEDIUM');
   const [details, setDetails] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,14 +57,9 @@ export function RequestCreatePage() {
   );
   const typesQuery = useRequestTypes(user?.id ?? '', organizationId, canCreate);
   const typeQuery = useRequestType(user?.id ?? '', organizationId, selectedTypeId, canCreate);
-  const departmentsQuery = useUserDepartmentOptions(
-    user?.id ?? '',
-    organizationId,
-    canCreate,
-    'ACTIVE',
-  );
   const createRequest = useCreateRequest(user?.id ?? '', organizationId);
   const submitRequest = useSubmitRequest(user?.id ?? '', organizationId);
+  const isSaving = createRequest.isPending || submitRequest.isPending;
 
   const selectedType = useMemo(
     () => typesQuery.data?.items.find((item) => item.id === selectedTypeId),
@@ -134,16 +126,14 @@ export function RequestCreatePage() {
     if (!typeQuery.data) return;
     const nextErrors = validateFields(details, typeQuery.data);
     if (!title.trim()) nextErrors.title = 'A title is required.';
-    if (!departmentId) nextErrors.departmentId = 'Select a department.';
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
     setFormError(null);
     try {
       const request = await createRequest.mutateAsync({
-        departmentId,
         requestTypeId: selectedTypeId,
         title: title.trim(),
-        description,
+        description: '',
         priority,
         details,
         attachments: [],
@@ -179,20 +169,6 @@ export function RequestCreatePage() {
           </Alert>
         )}
         <div className="request-form-meta">
-          <Select
-            label="Department"
-            name="departmentId"
-            value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
-            {...(errors.departmentId ? { error: errors.departmentId } : {})}
-            options={[
-              { value: '', label: 'Select a department' },
-              ...(departmentsQuery.data ?? []).map((department) => ({
-                value: department.id,
-                label: department.name,
-              })),
-            ]}
-          />
           <Input
             label="Title"
             name="title"
@@ -200,13 +176,6 @@ export function RequestCreatePage() {
             onChange={(event) => setTitle(event.target.value)}
             {...(errors.title ? { error: errors.title } : {})}
             placeholder="Summarize your request"
-          />
-          <Input
-            label="Description"
-            name="description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Add context for reviewers"
           />
           <Select
             label="Priority"
@@ -238,11 +207,12 @@ export function RequestCreatePage() {
           <Button
             variant="outline"
             onClick={() => void saveDraft(false)}
-            loading={createRequest.isPending}
+            loading={isSaving}
+            disabled={isSaving}
           >
             Save draft
           </Button>
-          <Button onClick={() => void saveDraft(true)} loading={createRequest.isPending}>
+          <Button onClick={() => void saveDraft(true)} loading={isSaving} disabled={isSaving}>
             Submit request
           </Button>
         </div>

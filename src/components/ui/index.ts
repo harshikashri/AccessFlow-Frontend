@@ -40,6 +40,8 @@ export {
 } from './Table';
 export { Tabs } from './Tabs';
 export type { TabItem, TabsProps } from './Tabs';
+export { Textarea } from './Textarea';
+export type { TextareaProps } from './Textarea';
 export { ToastProvider } from './ToastProvider';
 export { useToast } from './useToast';
 export type { ToastOptions, ToastVariant } from './toast.types';

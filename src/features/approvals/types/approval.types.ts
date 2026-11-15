@@ -25,6 +25,8 @@ export interface ApprovalStep {
   workflowVersion: number;
   stageId: string;
   stageName: string;
+  approverType: 'DEPARTMENT_MANAGER' | 'ROLE' | 'USER' | 'ORGANIZATION_ADMIN';
+  approverRoleName?: string | null;
   sequence: number;
   status: ApprovalStatus;
   approverId: string;

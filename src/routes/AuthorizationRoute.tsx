@@ -24,7 +24,7 @@ export function AuthorizationRoute({ itemId, children }: AuthorizationRouteProps
     !item ||
     !canAccessNavigationItem(user, item)
   ) {
-    return <Navigate to={APP_ROUTES.forbidden} replace state={{ from: location }} />;
+    return <Navigate to={APP_ROUTES.root} replace state={{ from: location }} />;
   }
 
   return children ? <>{children}</> : <Outlet />;

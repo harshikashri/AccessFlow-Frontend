@@ -23,7 +23,24 @@ export function WorkspaceBreadcrumbs() {
     [APP_ROUTES.settings]: 'Account settings',
     [APP_ROUTES.forbidden]: 'Access denied',
   };
-  const label = currentItem?.label ?? fallbackLabels[location.pathname] ?? 'Page not found';
+  const organizationRouteLabel =
+    location.pathname === APP_ROUTES.organizations
+      ? 'Organizations'
+      : location.pathname.startsWith(`${APP_ROUTES.organizations}/`)
+        ? 'Organization details'
+        : undefined;
+  const workflowRouteLabel =
+    location.pathname === APP_ROUTES.workflows
+      ? 'Workflows'
+      : location.pathname.startsWith(`${APP_ROUTES.workflows}/`)
+        ? 'Workflow details'
+        : undefined;
+  const label =
+    currentItem?.label ??
+    fallbackLabels[location.pathname] ??
+    organizationRouteLabel ??
+    workflowRouteLabel ??
+    'Page not found';
 
   return (
     <nav className="workspace-breadcrumbs" aria-label="Breadcrumb">

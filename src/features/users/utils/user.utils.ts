@@ -73,7 +73,12 @@ export function canAssignRoleAtScope(
   departmentId: string | null,
 ): boolean {
   if (role.roleType === 'ORGANIZATION_ADMIN' && scopeType !== 'ORGANIZATION') return false;
-  if (role.roleType === 'DEPARTMENT_MANAGER' && scopeType !== 'DEPARTMENT') return false;
+  if (
+    (role.roleType === 'DEPARTMENT_MANAGER' || role.rolePurpose === 'FINANCE_APPROVER') &&
+    scopeType !== 'DEPARTMENT'
+  ) {
+    return false;
+  }
   if (scopeType === 'DEPARTMENT' && !departmentId) return false;
 
   const hasPermission = (permission: PermissionId) =>

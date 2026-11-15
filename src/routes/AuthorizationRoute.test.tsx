@@ -33,6 +33,7 @@ function renderUsersRoute(value: AuthContextValue) {
     <AuthContext.Provider value={value}>
       <MemoryRouter initialEntries={['/users']}>
         <Routes>
+          <Route path="/" element={<p>Workspace</p>} />
           <Route
             path="/users"
             element={
@@ -53,6 +54,7 @@ function renderRolesRoute(value: AuthContextValue) {
     <AuthContext.Provider value={value}>
       <MemoryRouter initialEntries={['/roles']}>
         <Routes>
+          <Route path="/" element={<p>Workspace</p>} />
           <Route
             path="/roles"
             element={
@@ -95,10 +97,10 @@ describe('AuthorizationRoute', () => {
     expect(screen.getByText('Users workspace')).toBeTruthy();
   });
 
-  it('redirects users without the required permission to the forbidden page', () => {
+  it('redirects users without the required permission to the workspace', () => {
     renderUsersRoute(createContextValue(tenantUser()));
 
-    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.getByText('Workspace')).toBeTruthy();
     expect(screen.queryByText('Users workspace')).toBeNull();
   });
 
@@ -117,15 +119,15 @@ describe('AuthorizationRoute', () => {
     };
     renderUsersRoute(createContextValue(platformUser));
 
-    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.getByText('Workspace')).toBeTruthy();
     expect(screen.queryByText('Users workspace')).toBeNull();
   });
 
-  it('shows access-verification failure through the forbidden route when authorization is unavailable', () => {
+  it('returns to the workspace when authorization is unavailable', () => {
     const user = tenantUser({ [departmentId]: ['users.view'] });
     renderUsersRoute(createContextValue(user, 'unavailable'));
 
-    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.getByText('Workspace')).toBeTruthy();
     expect(screen.queryByText('Users workspace')).toBeNull();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
   });
@@ -148,7 +150,7 @@ describe('AuthorizationRoute', () => {
   it('does not expose role-management navigation without roles.view', () => {
     renderRolesRoute(createContextValue(tenantUser()));
 
-    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.getByText('Workspace')).toBeTruthy();
     expect(screen.queryByText('Roles workspace')).toBeNull();
   });
 });

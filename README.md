@@ -36,7 +36,7 @@ Run `npm run dev` and open `/ui-showcase` to explore the reusable components and
 
 The UI foundation includes accessible buttons, form controls, cards, badges, dialogs, dropdowns, tabs, tooltips, tables, avatars, separators, skeletons, spinners, alerts, and toasts.
 
-The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, tenant department management, tenant user management, role management, and request management routes load API-backed data. Workflows, approvals, and audit logs remain informational placeholders. Request attachments are displayed when returned by the API, but the current backend exposes metadata only and has no upload/download endpoint. Notifications continue to use backend workflow services rather than frontend code.
+The authentication routes are `/login`, `/forgot-password`, `/reset-password`, and `/set-password`. Authenticated users get a responsive sidebar, breadcrumbs, account menu, and explicit loading/unavailable/forbidden states. The platform and tenant dashboards, Super Admin organization management, tenant department management, tenant user management, role management, request management, workflow management, approvals, and audit logs load API-backed data. Request attachments are displayed when returned by the API, but the current backend exposes metadata only and has no upload/download endpoint. Notifications continue to use backend workflow services rather than frontend code.
 
 ## Prerequisites
 
@@ -75,7 +75,7 @@ Authentication calls use `/auth/login`, `/auth/refresh`, `/auth/me`, `/auth/logo
 
 Login and session restoration call `/auth/me` to obtain the authoritative current-user profile. Its `authorization` object contains `platformPermissions`, `organizationPermissions`, and `departmentPermissions` keyed by department ID. The frontend validates permission IDs and department IDs, keeps organization and department scopes separate, hides protected navigation until authorization is available, and guards direct feature URLs using the same requirements. Super Admin platform navigation uses the backend's `SUPER_ADMIN` session role; the frontend does not invent platform permission IDs. Authorization can be refreshed through the current-user endpoint.
 
-Role and workflow endpoints have additional backend assignment rules not represented in the `/auth/me` contract. Their current pages are placeholders and make no feature API calls, so they do not imply those additional backend capabilities are available in the UI.
+Role and workflow endpoints have additional backend assignment rules not represented in the `/auth/me` contract. Their pages load the existing APIs, and the backend remains authoritative for role eligibility, workflow validation, and assignment scope.
 
 ## Organization management (Phase 5)
 
@@ -143,19 +143,35 @@ The backend remains responsible for ownership, organization/department scope, dy
 
 The request APIs used by the frontend (relative to `/api`) are:
 
-| Method and path | Purpose |
-| --- | --- |
-| `GET /request-types` | List active request types available to the current session. |
-| `GET /request-types/:requestTypeId` | Load a dynamic request form definition. |
-| `GET /requests` | Server-paginated, scope-filtered request listing. |
-| `POST /requests` | Create a draft request. |
-| `GET /requests/:requestId` | Load an authorized request. |
-| `PATCH /requests/:requestId` | Update a draft or returned request. |
-| `POST /requests/:requestId/submit` | Start the configured approval workflow. |
-| `POST /requests/:requestId/resubmit` | Start a new approval attempt for a returned request. |
-| `POST /requests/:requestId/cancel` | Cancel an eligible request. |
-| `GET /requests/:requestId/approval-progress` | Load current approval progress. |
-| `GET /requests/:requestId/approval-history` | Load request and approval timeline events. |
+| Method and path                              | Purpose                                                     |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| `GET /request-types`                         | List active request types available to the current session. |
+| `GET /request-types/:requestTypeId`          | Load a dynamic request form definition.                     |
+| `GET /requests`                              | Server-paginated, scope-filtered request listing.           |
+| `POST /requests`                             | Create a draft request.                                     |
+| `GET /requests/:requestId`                   | Load an authorized request.                                 |
+| `PATCH /requests/:requestId`                 | Update a draft or returned request.                         |
+| `POST /requests/:requestId/submit`           | Start the configured approval workflow.                     |
+| `POST /requests/:requestId/resubmit`         | Start a new approval attempt for a returned request.        |
+| `POST /requests/:requestId/cancel`           | Cancel an eligible request.                                 |
+| `GET /requests/:requestId/approval-progress` | Load current approval progress.                             |
+| `GET /requests/:requestId/approval-history`  | Load request and approval timeline events.                  |
+
+## Workflow management
+
+Workflow Management is available at `/workflows`, `/workflows/new`, `/workflows/:workflowId`, and `/workflows/:workflowId/edit` for users with the corresponding organization-scoped `workflows.view` or `workflows.manage` permission. The editor supports request-type workflows with a readable selection condition and priority, plus the organization default fallback. Conditions support nested AND/OR groups, typed comparison values, stage execution rules, SLA duration, and stage ordering; the mandatory Department Manager stage remains first. Finance Approver role purpose requires department-scoped role assignments and stages, so all eligible assignees in the request department can claim the shared approval.
+
+The workflow directory and details show the configured selection rule in readable language, including amount thresholds, rather than only exposing raw condition data. Saving an edit creates a new workflow version; existing requests continue using their stored workflow snapshot.
+
+| Method and path                                    | Purpose                                                   |
+| -------------------------------------------------- | --------------------------------------------------------- |
+| `GET /approval-workflows`                          | List and filter workflows.                                |
+| `POST /approval-workflows`                         | Create a request-type workflow or organization default.   |
+| `GET /approval-workflows/:workflowId`              | Load workflow details and conditions.                     |
+| `PATCH /approval-workflows/:workflowId`            | Version-update an active workflow.                        |
+| `PATCH /approval-workflows/:workflowId/activate`   | Activate a validated workflow.                            |
+| `PATCH /approval-workflows/:workflowId/deactivate` | Deactivate a workflow; the default cannot be deactivated. |
+| `POST /approval-workflows/validate`                | Validate a workflow payload.                              |
 
 ## Approval management (Phase 10)
 
@@ -172,17 +188,41 @@ The current backend does not expose a release-claim endpoint or a dedicated elig
 
 The approval APIs used by the frontend (relative to `/api`) are:
 
-| Method and path | Purpose |
-| --- | --- |
-| `GET /approvals/inbox` | Load the authorized approval inbox. |
-| `GET /approvals/:approvalStepId` | Load an authorized approval step and request details. |
-| `POST /approvals/:approvalStepId/claim` | Atomically claim a claim-one approval. |
-| `POST /approvals/:approvalStepId/approve` | Approve the current stage. |
-| `POST /approvals/:approvalStepId/reject` | Reject the current stage with a required comment. |
-| `POST /approvals/:approvalStepId/return` | Return the request for correction with a required reason. |
-| `GET /approval-delegations` | List the current user's delegations. |
-| `POST /approval-delegations` | Create a backend-validated delegation. |
-| `POST /approval-delegations/:delegationId/revoke` | Revoke a delegation. |
+| Method and path                                   | Purpose                                                   |
+| ------------------------------------------------- | --------------------------------------------------------- |
+| `GET /approvals/inbox`                            | Load the authorized approval inbox.                       |
+| `GET /approvals/:approvalStepId`                  | Load an authorized approval step and request details.     |
+| `POST /approvals/:approvalStepId/claim`           | Atomically claim a claim-one approval.                    |
+| `POST /approvals/:approvalStepId/approve`         | Approve the current stage.                                |
+| `POST /approvals/:approvalStepId/reject`          | Reject the current stage with a required comment.         |
+| `POST /approvals/:approvalStepId/return`          | Return the request for correction with a required reason. |
+| `GET /approval-delegations`                       | List the current user's delegations.                      |
+| `POST /approval-delegations`                      | Create a backend-validated delegation.                    |
+| `POST /approval-delegations/:delegationId/revoke` | Revoke a delegation.                                      |
+
+## Audit logs and settings (Phase 11)
+
+Audit Logs are available at `/audit-logs` and `/audit-logs/:auditLogId` for users with effective `audit_logs.view` access; platform sessions can review platform audit records. The frontend uses backend-filtered, paginated results and safe detail/export responses.
+
+Settings are available at `/settings`, `/settings/profile`, `/settings/preferences`, `/settings/notifications`, `/settings/security`, and `/settings/organization`. Profile, preferences, notification preferences, active sessions, session revocation, and password change use the authenticated user's backend context. Organization settings are read-only here because organization name/status changes remain owned by the existing organization-management API.
+
+Phase 11 API endpoints used by the frontend:
+
+| Method and path                             | Purpose                                                        |
+| ------------------------------------------- | -------------------------------------------------------------- |
+| `GET /audit-logs`                           | Scoped, searchable, paginated audit listing.                   |
+| `GET /audit-logs/:auditLogId`               | Scoped audit event details with redacted values.               |
+| `GET /audit-logs/statistics`                | Backend-calculated audit counts.                               |
+| `GET /audit-logs/export`                    | Permission-aware CSV export with formula-injection protection. |
+| `GET/PATCH /settings/profile`               | Current-user profile retrieval and name update.                |
+| `GET/PATCH /settings/preferences`           | Current-user display preference retrieval and update.          |
+| `GET/PATCH /settings/notifications`         | Current-user notification preference retrieval and update.     |
+| `GET /settings/sessions`                    | Current user's safe active-session list.                       |
+| `POST /settings/sessions/:sessionId/revoke` | Revoke one of the current user's sessions.                     |
+| `POST /settings/security/password`          | Change password and revoke other sessions.                     |
+| `GET /settings/organization`                | Read current organization context.                             |
+
+Audit records remain append-only through the Mongoose model hooks. Existing Phase 5–10 services already write transactional audit events for organization, department, user, role, request, workflow, approval, and delegation operations; Phase 11 adds retrieval, redaction, export, successful-login/logout, and settings/security events.
 
 ## User management (Phase 7)
 
@@ -190,38 +230,38 @@ User Management is available only in the authenticated tenant organization at `/
 
 The frontend supports these existing endpoints (relative to `/api`):
 
-| Method and path                                                         | Supported behavior                                                                                                                                                                                                                                                    |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /users`                                                            | Server pagination, name/email search, global account-status filter, department filter (`departmentId=null` means unassigned), role filter, and supported name/email/status/date sorting. Results are filtered by effective backend organization and department scope. |
-| `POST /users`                                                           | Creates `{ name, email, departmentId?, roleAssignments? }` in the active organization and sends initial password setup instructions. No password or organization selector is sent.                                                                                    |
-| `GET /users/:userId`                                                    | Returns the safe profile, current organization membership, department summary, and active role summaries.                                                                                                                                                             |
-| `PATCH /users/:userId`                                                  | Changes only `{ name?, email? }`. Email remains globally unique; changing it revokes all of the user's sessions across organizations.                                                                                                                                 |
-| `PATCH /users/:userId/department`                                       | Transfers only the current organization's membership with `{ departmentId: string                                                                                                                                                                                     | null }`. The target must be an active in-organization department and source/target scopes are checked. Department Manager role assignments are not implicitly changed. |
-| `PATCH /users/:userId/activate` and `/deactivate`                       | Activate or deactivate this organization's membership only. The backend protects self/last-admin cases and revokes sessions for this organization on deactivation.                                                                                                    |
-| `POST /users/:userId/password-reset`                                    | Sends password setup or reset instructions; the API does not return the token. The frontend displays only a success/failure notice.                                                                                                                                   |
-| `GET /roles` and `GET /roles/users/:userId`                             | Discover active role options and assignment records for the role-management panel. Role endpoints additionally require Organization Admin access; a permission grant alone may not make these endpoints available.                                                    |
-| `POST /roles/:roleId/assign` and `DELETE /roles/:roleId/assign/:userId` | Add or remove one role assignment at its explicit organization or department scope. The backend validates scope, role compatibility, active account/membership, and the last-admin constraint.                                                                        |
-| `GET /departments`                                                      | Reused for active department choices and directory filters; the authenticated organization context is supplied by the session, not a browser-selected tenant.                                                                                                         |
+| Method and path                                                                                                    | Supported behavior                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /users`                                                                                                       | Server pagination, name/email search, global account-status filter, department filter (`departmentId=null` means unassigned), role filter, and supported name/email/status/date sorting. Results are filtered by effective backend organization and department scope. |
+| `POST /users`                                                                                                      | Creates `{ name, email, departmentId?, roleAssignments? }` in the active organization and sends initial password setup instructions. No password or organization selector is sent.                                                                                    |
+| `GET /users/:userId`                                                                                               | Returns the safe profile, current organization membership, department summary, and active role summaries.                                                                                                                                                             |
+| `PATCH /users/:userId`                                                                                             | Changes only `{ name?, email? }`. Email remains globally unique; changing it revokes all of the user's sessions across organizations.                                                                                                                                 |
+| `PATCH /users/:userId/department`                                                                                  | Transfers only the current organization's membership with `{ departmentId: string                                                                                                                                                                                     | null }`. The target must be an active in-organization department and source/target scopes are checked. Department Manager role assignments are not implicitly changed. |
+| `PATCH /users/:userId/activate` and `/deactivate`                                                                  | Activate or deactivate this organization's membership only. The backend protects self/last-admin cases and revokes sessions for this organization on deactivation.                                                                                                    |
+| `POST /users/:userId/password-reset`                                                                               | Sends password setup or reset instructions; the API does not return the token. The frontend displays only a success/failure notice.                                                                                                                                   |
+| `GET /roles` and `GET /roles/users/:userId`                                                                        | Discover active role options and assignment records for the role-management panel. Role endpoints additionally require Organization Admin access; a permission grant alone may not make these endpoints available.                                                    |
+| `POST /roles/:roleId/assign`, `PATCH /roles/assignments/:assignmentId`, and `DELETE /roles/:roleId/assign/:userId` | Add, atomically rescope, or remove one role assignment at its explicit organization or department scope. The backend validates scope, role compatibility, active account/membership, and the last-admin constraint.                                                   |
+| `GET /departments`                                                                                                 | Reused for active department choices and directory filters; the authenticated organization context is supplied by the session, not a browser-selected tenant.                                                                                                         |
 
 Global account status and organization-membership status are deliberately displayed separately. A newly created account needs to complete password setup; the membership activate/deactivate actions do not change global account state. If user creation returns `USER_CREATED_EMAIL_FAILED`, the user record has already committed; the page surfaces the returned user ID, disables another create attempt, and tells the operator not to retry blindly.
 
-The current APIs do not support Super Admin/platform user management, tenant selection, cross-organization filtering, global account activation/deactivation, a user-specific audit/activity read feed, last-login timestamps, employee/contact fields, or an atomic role-assignment scope update. The detail endpoint also omits `passwordSetupRequired`, so the UI does not infer setup state from an inactive global account. Role reassignment is not implemented as an implicit remove-then-add sequence. These capabilities require backend API changes and are not fabricated by the frontend.
+The current APIs do not support Super Admin/platform user management, tenant selection, cross-organization filtering, global account activation/deactivation, a user-specific audit/activity read feed, last-login timestamps, or employee/contact fields. The detail endpoint also omits `passwordSetupRequired`, so the UI does not infer setup state from an inactive global account. Role reassignment is an explicit atomic scope update rather than an implicit remove-then-add sequence.
 
 ## Role and permission management (Phase 8)
 
 Role Management is available in the active tenant at `/roles`, `/roles/new`, `/roles/:roleId`, and `/roles/:roleId/edit`. The pages use the existing `/api/roles` endpoints and permission catalog. The backend requires an authenticated active organization context, the matching `roles.view`, `roles.create`, or `roles.edit` organization permission, and an active Organization Admin assignment; a Super Admin platform session has no organization context for these endpoints. The frontend also checks the effective organization permission before exposing each page action.
 
-| Method and path                                                         | Supported behavior                                                                                                    |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `GET /roles`                                                            | Organization-scoped pagination, role-name search, status filtering, and sorting by name, type, status, or timestamps. |
-| `GET /roles/:roleId`                                                    | Returns role metadata, permissions, and active assignment-record count.                                               |
-| `POST /roles`                                                           | Creates a custom role in the active organization with name, description, purpose, and permission IDs.                 |
-| `PATCH /roles/:roleId`                                                  | Updates supported name, description, and custom-role purpose fields.                                                  |
-| `PATCH /roles/:roleId/permissions`                                      | Replaces the role's permissions. Built-in permission changes are backend-protected except for Department Manager.     |
-| `PATCH /roles/:roleId/activate` and `/deactivate`                       | Changes custom-role status; built-in role lifecycle changes are protected.                                            |
-| `GET /roles/permissions/catalog`                                        | Provides the modules and permission definitions displayed in the permission matrix.                                   |
-| `GET /roles/:roleId/users` and `GET /roles/users/:userId`               | Returns paginated assignment records with their scope and status.                                                     |
-| `POST /roles/:roleId/assign` and `DELETE /roles/:roleId/assign/:userId` | Adds an assignment at an explicit scope or marks a matching active assignment inactive.                               |
+| Method and path                                                                                                    | Supported behavior                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| `GET /roles`                                                                                                       | Organization-scoped pagination, role-name search, status filtering, and sorting by name, type, status, or timestamps. |
+| `GET /roles/:roleId`                                                                                               | Returns role metadata, permissions, and active assignment-record count.                                               |
+| `POST /roles`                                                                                                      | Creates a custom role in the active organization with name, description, purpose, and permission IDs.                 |
+| `PATCH /roles/:roleId`                                                                                             | Updates supported name, description, and custom-role purpose fields.                                                  |
+| `PATCH /roles/:roleId/permissions`                                                                                 | Replaces the role's permissions. Built-in permission changes are backend-protected except for Department Manager.     |
+| `PATCH /roles/:roleId/activate` and `/deactivate`                                                                  | Changes custom-role status; built-in role lifecycle changes are protected.                                            |
+| `GET /roles/permissions/catalog`                                                                                   | Provides the modules and permission definitions displayed in the permission matrix.                                   |
+| `GET /roles/:roleId/users` and `GET /roles/users/:userId`                                                          | Returns paginated assignment records with their scope and status.                                                     |
+| `POST /roles/:roleId/assign`, `PATCH /roles/assignments/:assignmentId`, and `DELETE /roles/:roleId/assign/:userId` | Adds, atomically re-scopes, or marks a matching active assignment inactive.                                           |
 
 Assignment scope belongs to each user-role assignment, not the role. Organization Admin requires organization scope; Department Manager requires department scope. Assignment candidates are discovered through the existing user directory (`users.view`), and department options through the department directory (`departments.view`); the backend validates membership, account, scope, role compatibility, and last-administrator protections again on submission. Permission changes affect effective access, so the signed-in user refreshes `/auth/me` after changing their own access. See the [Role Management backend-gap report](./ROLE_MANAGEMENT_BACKEND_GAPS.md) for unsupported API capabilities and constraints that the UI intentionally does not simulate.
 

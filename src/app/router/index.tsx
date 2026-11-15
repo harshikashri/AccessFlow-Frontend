@@ -2,8 +2,6 @@ import { lazy, Suspense, type PropsWithChildren } from 'react';
 import { createBrowserRouter, RouterProvider, useLocation } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 import App from '@/app/App';
-import { AccountSettingsPage } from '@/app/pages/AccountSettingsPage';
-import { FeaturePlaceholderPage } from '@/app/pages/FeaturePlaceholderPage';
 import { ForbiddenPage } from '@/app/pages/ForbiddenPage';
 import { NotFoundPage } from '@/app/pages/NotFoundPage';
 import { ProfilePage } from '@/app/pages/ProfilePage';
@@ -14,6 +12,10 @@ import { OrganizationCreatePage } from '@/features/organizations/pages/Organizat
 import { OrganizationDetailsPage } from '@/features/organizations/pages/OrganizationDetailsPage';
 import { OrganizationEditPage } from '@/features/organizations/pages/OrganizationEditPage';
 import { OrganizationListPage } from '@/features/organizations/pages/OrganizationListPage';
+import { WorkflowCreatePage } from '@/features/workflows/pages/WorkflowCreatePage';
+import { WorkflowDetailsPage } from '@/features/workflows/pages/WorkflowDetailsPage';
+import { WorkflowEditPage } from '@/features/workflows/pages/WorkflowEditPage';
+import { WorkflowListPage } from '@/features/workflows/pages/WorkflowListPage';
 import { DepartmentCreatePage } from '@/features/departments/pages/DepartmentCreatePage';
 import { DepartmentDetailsPage } from '@/features/departments/pages/DepartmentDetailsPage';
 import { DepartmentEditPage } from '@/features/departments/pages/DepartmentEditPage';
@@ -33,6 +35,14 @@ import { RequestListPage } from '@/features/requests/pages/RequestListPage';
 import { ApprovalDetailsPage } from '@/features/approvals/pages/ApprovalDetailsPage';
 import { ApprovalInboxPage } from '@/features/approvals/pages/ApprovalInboxPage';
 import { DelegationPage } from '@/features/approvals/pages/DelegationPage';
+import { AuditLogDetailsPage } from '@/features/audit-logs/pages/AuditLogDetailsPage';
+import { AuditLogsPage } from '@/features/audit-logs/pages/AuditLogsPage';
+import { SettingsOverviewPage } from '@/features/settings/pages/SettingsOverviewPage';
+import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
+import { PreferencesSettingsPage } from '@/features/settings/pages/PreferencesSettingsPage';
+import { NotificationSettingsPage } from '@/features/settings/pages/NotificationSettingsPage';
+import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
+import { OrganizationSettingsPage } from '@/features/settings/pages/OrganizationSettingsPage';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
@@ -202,7 +212,31 @@ const routes: RouteObject[] = [
         path: 'workflows',
         element: (
           <AuthorizationRoute itemId="workflows">
-            <FeaturePlaceholderPage itemId="workflows" />
+            <WorkflowListPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'workflows/new',
+        element: (
+          <AuthorizationRoute itemId="workflows">
+            <WorkflowCreatePage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'workflows/:workflowId/edit',
+        element: (
+          <AuthorizationRoute itemId="workflows">
+            <WorkflowEditPage />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'workflows/:workflowId',
+        element: (
+          <AuthorizationRoute itemId="workflows">
+            <WorkflowDetailsPage />
           </AuthorizationRoute>
         ),
       },
@@ -272,14 +306,16 @@ const routes: RouteObject[] = [
       },
       {
         path: 'audit-logs',
-        element: (
-          <AuthorizationRoute itemId="audit-logs">
-            <FeaturePlaceholderPage itemId="audit-logs" />
-          </AuthorizationRoute>
-        ),
+        element: <AuditLogsPage />,
       },
+      { path: 'audit-logs/:auditLogId', element: <AuditLogDetailsPage /> },
       { path: 'profile', element: <ProfilePage /> },
-      { path: 'settings', element: <AccountSettingsPage /> },
+      { path: 'settings', element: <SettingsOverviewPage /> },
+      { path: 'settings/profile', element: <ProfileSettingsPage /> },
+      { path: 'settings/preferences', element: <PreferencesSettingsPage /> },
+      { path: 'settings/notifications', element: <NotificationSettingsPage /> },
+      { path: 'settings/security', element: <SecuritySettingsPage /> },
+      { path: 'settings/organization', element: <OrganizationSettingsPage /> },
       { path: '403', element: <ForbiddenPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

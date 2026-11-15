@@ -4,6 +4,7 @@ import { departmentQueryKeys } from '@/features/departments/hooks/department-que
 import { userQueryKeys } from '@/features/users/hooks/user-query-keys';
 import { userRoleService } from '@/features/users/services/user-role.service';
 import type { UserRoleAssignmentRequest } from '@/features/users/types/user.types';
+import type { UpdateUserRoleAssignmentRequest } from '@/features/users/types/user.types';
 import { roleService } from '@/features/roles/services/role.service';
 import type {
   CreateRoleRequest,
@@ -141,6 +142,20 @@ export function useRemoveRoleAssignment(actorId: string, organizationId: string)
       userId: string;
       scope: { scopeType: 'ORGANIZATION' | 'DEPARTMENT'; departmentId?: string };
     }) => userRoleService.remove(roleId, userId, scope),
+    onSuccess: () => invalidateRoleData(queryClient, actorId, organizationId),
+  });
+}
+
+export function useUpdateRoleAssignment(actorId: string, organizationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      assignmentId,
+      payload,
+    }: {
+      assignmentId: string;
+      payload: UpdateUserRoleAssignmentRequest;
+    }) => roleService.updateAssignment(assignmentId, payload),
     onSuccess: () => invalidateRoleData(queryClient, actorId, organizationId),
   });
 }

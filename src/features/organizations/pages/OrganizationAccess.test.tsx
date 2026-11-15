@@ -41,6 +41,7 @@ function renderOrganizationRoute(user: AuthenticatedUser) {
     <AuthContext.Provider value={context}>
       <MemoryRouter initialEntries={['/organizations/507f1f77bcf86cd799439011/edit']}>
         <Routes>
+          <Route path="/" element={<p>Workspace</p>} />
           <Route
             path="/organizations/:organizationId/edit"
             element={
@@ -66,7 +67,7 @@ describe('organization route authorization', () => {
   it('blocks tenant users from organization management direct URLs', () => {
     renderOrganizationRoute(createUser(null));
 
-    expect(screen.getByText('Access not available')).toBeTruthy();
+    expect(screen.getByText('Workspace')).toBeTruthy();
     expect(screen.queryByText('Organization edit route')).toBeNull();
   });
 });

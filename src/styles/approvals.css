@@ -43,6 +43,16 @@
   font-size: 0.875rem;
 }
 
+.approval-stage-summary {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.approval-stage-summary span {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
 .approval-status {
   border-radius: 999px;
   padding: 0.25rem 0.55rem;
