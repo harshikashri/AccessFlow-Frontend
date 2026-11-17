@@ -17,11 +17,20 @@ import {
   useSubmitRequest,
 } from '../hooks/useRequests';
 
+function formatActivityType(type: string): string {
+  return type
+    .split('_')
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(' ');
+}
+
 export function RequestDetailsPage() {
   const { requestId = '' } = useParams();
   const { user, authorizationStatus } = useAuth();
   const navigate = useNavigate();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [showAllActivity, setShowAllActivity] = useState(false);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const organizationId = user?.organizationId ?? '';
@@ -66,6 +75,23 @@ export function RequestDetailsPage() {
   const canSubmit = isOwner && request.status === 'DRAFT';
   const canResubmit = isOwner && request.status === 'RETURNED';
   const canCancel = isOwner && ['DRAFT', 'SUBMITTED', 'PENDING_APPROVAL'].includes(request.status);
+  const progress = progressQuery.data;
+  const skippedStages = new Map(
+    (progress?.skippedStages ?? []).map((stage) => [stage.sequence, stage]),
+  );
+  const stageSequences = progress
+    ? Array.from(
+        new Set([
+          ...(progress.stages?.map((stage) => stage.sequence) ?? []),
+          ...progress.completedStages,
+          ...progress.pendingStages,
+          ...progress.skippedStages.map((stage) => stage.sequence),
+        ]),
+      ).sort((a, b) => a - b)
+    : [];
+  const activityEvents = historyQuery.data?.timeline ?? [];
+  const recentEvents = showAllActivity ? activityEvents : activityEvents.slice(-5);
+  const visibleActivityEvents = [...recentEvents].reverse();
 
   async function runAction(action: () => Promise<unknown>, message: string) {
     setError(null);
@@ -153,7 +179,10 @@ export function RequestDetailsPage() {
             </div>
             <div>
               <dt>Department</dt>
-              <dd>{request.department?.name || request.departmentId}</dd>
+              <dd>
+                {request.department?.name ||
+                  (request.departmentId ? request.departmentId : 'Organization-level')}
+              </dd>
             </div>
             <div>
               <dt>Created</dt>
@@ -184,67 +213,166 @@ export function RequestDetailsPage() {
           </dl>
         </Card>
         <Card
-          title="Approval progress"
+          title="Approval stages"
           description={
-            progressQuery.data?.currentStage
-              ? `Current stage: ${progressQuery.data.currentStage.stageName}`
+            progress?.currentStage
+              ? `Current stage: ${progress.currentStage.stageName}`
               : 'No active approval stage'
           }
         >
           {progressQuery.isError ? (
-            <p>Approval progress is currently unavailable.</p>
-          ) : progressQuery.data ? (
-            <ol className="request-progress">
-              {Array.from(
-                new Set([
-                  ...progressQuery.data.completedStages,
-                  ...progressQuery.data.pendingStages,
-                  ...progressQuery.data.skippedStages.map((stage) => stage.sequence),
-                ]),
-              )
-                .sort((a, b) => a - b)
-                .map((sequence) => (
-                  <li
-                    key={sequence}
-                    className={
-                      progressQuery.data.completedStages.includes(sequence)
-                        ? 'is-complete'
-                        : progressQuery.data.currentStage?.sequence === sequence
-                          ? 'is-current'
-                          : ''
-                    }
-                  >
-                    <span>Stage {sequence}</span>
-                    <small>
-                      {progressQuery.data.completedStages.includes(sequence)
-                        ? 'Completed'
-                        : progressQuery.data.currentStage?.sequence === sequence
-                          ? 'Current'
-                          : 'Pending'}
-                    </small>
+            <p className="request-tracking-state">
+              Approval progress is currently unavailable.
+            </p>
+          ) : progress && stageSequences.length ? (
+            <ol className="request-progress" aria-label="Approval stages">
+              {stageSequences.map((sequence) => {
+                const isSkipped = skippedStages.has(sequence);
+                const isCurrent = progress.currentStage?.sequence === sequence;
+                const isComplete = progress.completedStages.includes(sequence) && !isSkipped;
+                const stage = progress.stages?.find((item) => item.sequence === sequence);
+                const isRejected = stage?.status === 'REJECTED';
+                const isReturned = stage?.status === 'RETURNED';
+                const isCancelled = stage?.status === 'CANCELLED';
+                let state:
+                  | 'skipped'
+                  | 'rejected'
+                  | 'returned'
+                  | 'cancelled'
+                  | 'complete'
+                  | 'current'
+                  | 'pending' = 'pending';
+                if (isSkipped) state = 'skipped';
+                else if (isRejected) state = 'rejected';
+                else if (isReturned) state = 'returned';
+                else if (isCancelled) state = 'cancelled';
+                else if (isComplete) state = 'complete';
+                else if (isCurrent) state = 'current';
+                const stageName =
+                  stage?.stageName ??
+                  skippedStages.get(sequence)?.stageName ??
+                  (isCurrent ? progress.currentStage?.stageName : undefined) ??
+                  `Stage ${sequence}`;
+                const stateLabels = {
+                  complete: 'Completed',
+                  skipped: 'Skipped',
+                  rejected: 'Rejected',
+                  returned: 'Returned',
+                  cancelled: 'Cancelled',
+                  current: 'In progress',
+                  pending: 'Waiting',
+                };
+                const stateLabel = stateLabels[state];
+
+                return (
+                  <li key={sequence} className={`request-progress__item is-${state}`}>
+                    <details className="request-progress__disclosure">
+                      <summary aria-current={isCurrent ? 'step' : undefined}>
+                        <span className="request-progress__marker" aria-hidden="true">
+                          {sequence}
+                        </span>
+                        <span className="request-progress__details">
+                          <strong>{stageName}</strong>
+                          <span>Stage {sequence}</span>
+                        </span>
+                        <span className="request-progress__status">{stateLabel}</span>
+                      </summary>
+                      <div className="request-progress__content">
+                        {stage ? (
+                          <dl className="request-progress__info">
+                            {stage.description && (
+                              <div>
+                                <dt>Stage details</dt>
+                                <dd>{stage.description}</dd>
+                              </div>
+                            )}
+                            <div>
+                              <dt>Approver</dt>
+                              <dd>
+                                {stage.approverRoleName ??
+                                  (stage.approverNames.length
+                                    ? stage.approverNames.join(', ')
+                                    : formatActivityType(stage.approverType))}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Approval rule</dt>
+                              <dd>{stage.approvalMode === 'ALL' ? 'All approvers' : 'Any approver'}</dd>
+                            </div>
+                            <div>
+                              <dt>Scope</dt>
+                              <dd>
+                                {stage.scopeType
+                                  ? formatActivityType(stage.scopeType)
+                                  : 'Not specified'}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Due date</dt>
+                              <dd>
+                                {stage.slaDueAt
+                                  ? new Date(stage.slaDueAt).toLocaleString()
+                                  : 'No deadline'}
+                              </dd>
+                            </div>
+                            {stage.comments.length > 0 && (
+                              <div>
+                                <dt>Decision notes</dt>
+                                <dd>{stage.comments.join(' · ')}</dd>
+                              </div>
+                            )}
+                          </dl>
+                        ) : (
+                          <p className="request-tracking-state">
+                            Detailed stage information is unavailable.
+                          </p>
+                        )}
+                      </div>
+                    </details>
                   </li>
-                ))}
+                );
+              })}
             </ol>
+          ) : progress ? (
+            <p className="request-tracking-state">No approval stages have been recorded yet.</p>
           ) : (
-            <p>Loading approval progress…</p>
+            <p className="request-tracking-state">Loading approval stages…</p>
           )}
         </Card>
         <Card title="Activity history">
           {historyQuery.isError ? (
-            <p>Activity history is currently unavailable.</p>
-          ) : historyQuery.data?.timeline.length ? (
-            <ol className="request-timeline">
-              {historyQuery.data.timeline.map((event, index) => (
+            <p className="request-tracking-state">
+              Activity history is currently unavailable.
+            </p>
+          ) : activityEvents.length ? (
+            <ol className="request-timeline" aria-label="Request activity">
+              {visibleActivityEvents.map((event, index) => (
                 <li key={`${event.timestamp}-${index}`}>
-                  <strong>{event.type.replaceAll('_', ' ')}</strong>
-                  <span>
-                    {event.actorName || 'System'} · {new Date(event.timestamp).toLocaleString()}
-                  </span>
+                  <div className="request-timeline__entry">
+                    <strong>{formatActivityType(event.type)}</strong>
+                    <div className="request-timeline__meta">
+                      <span>{event.actorName || 'System'}</span>
+                      <time dateTime={event.timestamp}>
+                        {new Date(event.timestamp).toLocaleString()}
+                      </time>
+                    </div>
+                  </div>
                 </li>
               ))}
             </ol>
           ) : (
-            <p>No activity has been recorded yet.</p>
+            <p className="request-tracking-state">No activity has been recorded yet.</p>
+          )}
+          {activityEvents.length > 5 && (
+            <Button
+              className="request-timeline__toggle"
+              size="sm"
+              variant="ghost"
+              aria-expanded={showAllActivity}
+              onClick={() => setShowAllActivity((expanded) => !expanded)}
+            >
+              {showAllActivity ? 'Show recent activity' : `Show all activity (${activityEvents.length})`}
+            </Button>
           )}
         </Card>
         {request.attachments.length > 0 && (

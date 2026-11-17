@@ -33,11 +33,6 @@ export const settingsService = {
   sessions: async () => (await get<{ items: SessionInfo[] }>('/settings/sessions')).items,
   revokeSession: (id: string) =>
     settingsService.post(`/settings/sessions/${encodeURIComponent(id)}/revoke`),
-  changePassword: (payload: {
-    currentPassword: string;
-    password: string;
-    confirmPassword: string;
-  }) => settingsService.post('/settings/security/password', payload),
   organization: () => get<OrganizationSettings>('/settings/organization'),
   post: async (path: string, payload?: unknown) => {
     const response = await apiClient.post<ApiEnvelope<unknown>>(path, payload);

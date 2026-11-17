@@ -5,6 +5,7 @@ import { AppIcon } from '@/components/common/AppIcon';
 export interface SidebarProps extends PropsWithChildren {
   brand?: ReactNode;
   footer?: ReactNode;
+  footerClassName?: string;
   open?: boolean;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -15,6 +16,7 @@ export interface SidebarProps extends PropsWithChildren {
 export function Sidebar({
   brand,
   footer,
+  footerClassName = '',
   open = false,
   collapsed = false,
   onToggleCollapse,
@@ -55,7 +57,9 @@ export function Sidebar({
       >
         {children}
       </nav>
-      {footer && <div className="dashboard-sidebar__footer">{footer}</div>}
+      {footer && (
+        <div className={`dashboard-sidebar__footer ${footerClassName}`.trim()}>{footer}</div>
+      )}
     </aside>
   );
 }

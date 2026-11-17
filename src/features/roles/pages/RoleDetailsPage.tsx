@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AppIcon } from '@/components/common/AppIcon';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { BackLink } from '@/components/common/BackLink';
 import { Alert, Button, Card, Modal } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -78,14 +80,10 @@ export function RoleDetailsPage() {
   if (!validRoleId) {
     return (
       <div className="workspace-page role-page">
+        <BackLink to={APP_ROUTES.roles} label="Back to roles" />
         <ErrorState
           title="Role link is invalid"
           description="The role identifier in this URL is not valid."
-          action={
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.roles)}>
-              Back to roles
-            </Button>
-          }
         />
       </div>
     );
@@ -96,6 +94,7 @@ export function RoleDetailsPage() {
   if (roleQuery.isError || !role) {
     return (
       <div className="workspace-page role-page">
+        <BackLink to={APP_ROUTES.roles} label="Back to roles" />
         <ErrorState
           title="Role could not be loaded"
           description={getAuthErrorMessage(
@@ -106,9 +105,6 @@ export function RoleDetailsPage() {
             <div className="role-page__inline-actions">
               <Button variant="outline" onClick={() => void roleQuery.refetch()}>
                 Retry
-              </Button>
-              <Button variant="ghost" onClick={() => navigate(APP_ROUTES.roles)}>
-                Back to roles
               </Button>
             </div>
           }
@@ -217,6 +213,7 @@ export function RoleDetailsPage() {
             {canEdit && (
               <Button
                 variant="outline"
+                leadingIcon={<AppIcon name="edit" size={16} />}
                 onClick={() => navigate(`${APP_ROUTES.roles}/${role.id}/edit`)}
               >
                 Edit role
@@ -234,18 +231,9 @@ export function RoleDetailsPage() {
         }
       />
 
-      {isBuiltIn && (
-        <Alert variant="information" title="Built-in role">
-          Built-in role names and activation states are managed by the platform. This backend allows
-          only the role-specific configuration shown below.
-        </Alert>
-      )}
       <RoleOverview role={role} />
 
-      <Card
-        title="Permissions in this role"
-        description="These are role-definition permissions, not the complete effective permissions of any individual user."
-      >
+      <Card title="Permissions in this role">
         {permissionQuery.isPending ? (
           <LoadingState label="Loading permission definitions" />
         ) : permissionQuery.isError || !permissionQuery.data ? (

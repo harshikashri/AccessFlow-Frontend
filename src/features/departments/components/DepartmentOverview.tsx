@@ -18,18 +18,6 @@ export function DepartmentOverview({ department }: { department: Department }) {
           <dd>{department.description || 'No description provided'}</dd>
         </div>
         <div>
-          <dt>Organization ID</dt>
-          <dd>
-            <code>{department.organizationId}</code>
-          </dd>
-        </div>
-        <div>
-          <dt>Department ID</dt>
-          <dd>
-            <code>{department.id}</code>
-          </dd>
-        </div>
-        <div>
           <dt>Created</dt>
           <dd>{formatDepartmentDate(department.createdAt)}</dd>
         </div>

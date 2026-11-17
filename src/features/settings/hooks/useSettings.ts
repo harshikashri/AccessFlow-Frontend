@@ -16,8 +16,12 @@ export const usePreferences = () =>
   useQuery({ queryKey: settingsKeys.preferences(), queryFn: settingsService.preferences });
 export const useNotifications = () =>
   useQuery({ queryKey: settingsKeys.notifications(), queryFn: settingsService.notifications });
-export const useSessions = () =>
-  useQuery({ queryKey: settingsKeys.sessions(), queryFn: settingsService.sessions });
+export const useSessions = (enabled = true) =>
+  useQuery({
+    queryKey: settingsKeys.sessions(),
+    queryFn: settingsService.sessions,
+    enabled,
+  });
 export const useOrganizationSettings = () =>
   useQuery({ queryKey: settingsKeys.organization(), queryFn: settingsService.organization });
 
@@ -49,4 +53,3 @@ export const useRevokeSession = () => {
     onSuccess: () => void client.invalidateQueries({ queryKey: settingsKeys.sessions() }),
   });
 };
-export const useChangePassword = () => useMutation({ mutationFn: settingsService.changePassword });

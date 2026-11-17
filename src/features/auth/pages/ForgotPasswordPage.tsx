@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { BackLink } from '@/components/common/BackLink';
 import { Alert, Button, Card, Input } from '@/components/ui';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { authService } from '@/features/auth/services/auth.service';
@@ -34,6 +34,7 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthLayout>
+      <BackLink to={APP_ROUTES.signIn} label="Back to sign in" />
       <Card
         className="auth-card"
         contentClassName="auth-card__content"
@@ -65,9 +66,6 @@ export function ForgotPasswordPage() {
             Send instructions
           </Button>
         </form>
-        <p className="auth-card__back-link">
-          <Link to={APP_ROUTES.signIn}>Back to sign in</Link>
-        </p>
       </Card>
     </AuthLayout>
   );

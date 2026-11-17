@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/common/PageHeader';
-import { AppIcon } from '@/components/common/AppIcon';
-import { Button, Card } from '@/components/ui';
+import { IconButton } from '@/components/common/IconButton';
+import { Card } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -30,7 +30,14 @@ export function ProfilePage() {
     }
   }
 
-  const departmentIds = Object.keys(user.authorization.departmentPermissions);
+  const permissions = [
+    ...new Set([
+      ...user.authorization.organizationPermissions,
+      ...Object.values(user.authorization.departmentPermissions).flat(),
+    ]),
+  ];
+  const rolePermissions = user.authorization.rolePermissions;
+  const isPlatformAdmin = isPlatformSession(user);
 
   return (
     <div className="workspace-page">
@@ -39,18 +46,14 @@ export function ProfilePage() {
         title="My profile"
         description="Profile and access details returned for your authenticated session."
         actions={
-          <Button
+          <IconButton
             variant="outline"
-            leadingIcon={
-              <span className={refreshing ? 'workspace-refresh--spinning' : ''}>
-                <AppIcon name="refresh" size={16} />
-              </span>
-            }
+            icon="refresh"
+            label="Refresh access"
+            className={refreshing ? 'workspace-refresh--spinning' : ''}
             loading={refreshing}
             onClick={() => void handleRefresh()}
-          >
-            Refresh access
-          </Button>
+          />
         }
       />
       <Card
@@ -66,22 +69,50 @@ export function ProfilePage() {
             <dt>Email</dt>
             <dd>{user.email}</dd>
           </div>
-          <div>
-            <dt>Platform role</dt>
-            <dd>{isPlatformSession(user) ? 'Super Admin' : 'Not provided'}</dd>
-          </div>
-          <div>
-            <dt>Organization context</dt>
-            <dd>{user.organizationId ?? 'No organization context'}</dd>
-          </div>
-          <div>
-            <dt>Department permission scopes</dt>
-            <dd>
-              {departmentIds.length
-                ? departmentIds.join(', ')
-                : 'No department-specific permissions'}
-            </dd>
-          </div>
+          {isPlatformAdmin && (
+            <div>
+              <dt>Platform role</dt>
+              <dd>Super Admin</dd>
+            </div>
+          )}
+          {isPlatformAdmin && (
+            <div>
+              <dt>Organization context</dt>
+              <dd>{user.organizationId ?? 'No organization context'}</dd>
+            </div>
+          )}
+          {rolePermissions?.length ? (
+            <div>
+              <dt>Permissions by role</dt>
+              <dd>
+                <ul className="workspace-profile-role-permissions">
+                  {rolePermissions.map((rolePermission, index) => (
+                    <li key={`${rolePermission.roleName}-${rolePermission.scopeType}-${index}`}>
+                      <strong>{rolePermission.roleName}</strong>
+                      <span>
+                        {' '}
+                        (
+                        {rolePermission.scopeType === 'ORGANIZATION'
+                          ? 'Organization scope'
+                          : 'Department scope'}
+                        )
+                      </span>
+                      <p>
+                        {rolePermission.permissions.length
+                          ? rolePermission.permissions.join(', ')
+                          : 'No permissions assigned'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            </div>
+          ) : (
+            <div>
+              <dt>Permissions</dt>
+              <dd>{permissions.length ? permissions.join(', ') : 'No permissions assigned'}</dd>
+            </div>
+          )}
         </dl>
       </Card>
     </div>

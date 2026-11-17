@@ -24,8 +24,9 @@ describe('RoleOverview assignment scope', () => {
     render(<RoleOverview role={legacyRole} />);
 
     expect(screen.getByText('Unconfigured')).toBeTruthy();
-    expect(
-      screen.getByText(/must be edited to choose an assignment scope before it can be assigned/),
-    ).toBeTruthy();
+    expect(screen.getByText(/must be edited to choose supported assignment scopes/)).toBeTruthy();
+    expect(screen.queryByText(/complete effective access/)).toBeNull();
+    expect(screen.queryByText('Current organization')).toBeNull();
+    expect(screen.queryByText(legacyRole.organizationId)).toBeNull();
   });
 });

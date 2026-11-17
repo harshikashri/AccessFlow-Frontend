@@ -110,23 +110,19 @@ export function WorkflowEditPage() {
   return (
     <div className="workspace-page workflow-page">
       <PageHeader
-        eyebrow="Workflows"
+        eyebrow="Workflow editor"
         title={`Edit ${workflow.name}`}
-        description="Saving creates a new workflow version so existing requests retain their approval history."
-        actions={
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${APP_ROUTES.workflows}/${workflow.id}`)}
-          >
-            Cancel
-          </Button>
-        }
+        backLink={{
+          to: `${APP_ROUTES.workflows}/${workflow.id}`,
+          label: 'Back to workflow',
+        }}
       />
       <WorkflowForm
         initialValues={{
           name: workflow.name,
           description: workflow.description,
           requestTypeId: workflow.requestTypeId ?? '',
+          workflowScope: workflow.workflowScope ?? 'DEPARTMENT',
           isDefault: workflow.isDefault,
           selectionCondition: workflow.selectionCondition,
           priority: workflow.priority,

@@ -16,15 +16,18 @@ export type NavigationIcon =
   | 'profile'
   | 'settings';
 
+export interface PermissionNavigationRequirement {
+  kind: 'permissions';
+  permissions: readonly PermissionId[];
+  mode: 'any' | 'all';
+  scope: PermissionScope;
+}
+
 export type NavigationRequirement =
   | { kind: 'authenticated' }
   | { kind: 'platform-session' }
-  | {
-      kind: 'permissions';
-      permissions: readonly PermissionId[];
-      mode: 'any' | 'all';
-      scope: PermissionScope;
-    };
+  | PermissionNavigationRequirement
+  | { kind: 'all'; requirements: readonly PermissionNavigationRequirement[] };
 
 export interface NavigationItem {
   id: string;
@@ -46,11 +49,22 @@ export interface NavigationSection {
 const permissionRequirement = (
   permission: PermissionId,
   scope: PermissionScope,
-): NavigationRequirement => ({
+): PermissionNavigationRequirement => ({
   kind: 'permissions',
   permissions: [permission],
   mode: 'any',
   scope,
+});
+
+const dashboardSectionRequirement = (
+  permission: PermissionId,
+  scope: PermissionScope = 'organization-or-department',
+): NavigationRequirement => ({
+  kind: 'all',
+  requirements: [
+    permissionRequirement('dashboard.view', 'organization-or-department'),
+    permissionRequirement(permission, scope),
+  ],
 });
 
 export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
@@ -60,12 +74,41 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
     items: [
       {
         id: 'platform-dashboard',
-        label: 'Platform dashboard',
+        label: 'Dashboard',
         icon: 'dashboard',
-        description: 'A future home for platform-level operations.',
+        description: 'Platform overview and analytics.',
         section: 'Platform',
         path: APP_ROUTES.dashboard,
         requirement: { kind: 'platform-session' },
+        children: [
+          {
+            id: 'platform-organization-analytics',
+            label: 'Org analytics',
+            icon: 'organizations',
+            description: 'Organization registrations and status.',
+            section: 'Platform',
+            path: APP_ROUTES.platformOrganizationAnalytics,
+            requirement: { kind: 'platform-session' },
+          },
+          {
+            id: 'platform-user-analytics',
+            label: 'User analytics',
+            icon: 'users',
+            description: 'Platform user and membership trends.',
+            section: 'Platform',
+            path: APP_ROUTES.platformUserAnalytics,
+            requirement: { kind: 'platform-session' },
+          },
+          {
+            id: 'platform-usage',
+            label: 'Platform usage',
+            icon: 'requests',
+            description: 'Platform request and activity trends.',
+            section: 'Platform',
+            path: APP_ROUTES.platformUsage,
+            requirement: { kind: 'platform-session' },
+          },
+        ],
       },
       {
         id: 'platform-audit-logs',
@@ -99,6 +142,53 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         section: 'Workspace',
         path: APP_ROUTES.dashboard,
         requirement: permissionRequirement('dashboard.view', 'organization-or-department'),
+        children: [
+          {
+            id: 'dashboard-request-summary',
+            label: 'Request summary',
+            icon: 'requests',
+            description: 'Review request trends and statuses.',
+            section: 'Workspace',
+            path: APP_ROUTES.dashboardRequestSummary,
+            requirement: dashboardSectionRequirement('requests.view'),
+          },
+          {
+            id: 'dashboard-approval-summary',
+            label: 'Approval summary',
+            icon: 'approvals',
+            description: 'Review approval workload and performance.',
+            section: 'Workspace',
+            path: APP_ROUTES.dashboardApprovalSummary,
+            requirement: dashboardSectionRequirement('requests.approve'),
+          },
+          {
+            id: 'dashboard-approval-activity',
+            label: 'Approval activity',
+            icon: 'approvals',
+            description: 'Review recorded approval decisions and stages.',
+            section: 'Workspace',
+            path: APP_ROUTES.dashboardApprovalActivity,
+            requirement: dashboardSectionRequirement('requests.approve'),
+          },
+          {
+            id: 'dashboard-user-statistics',
+            label: 'User statistics',
+            icon: 'users',
+            description: 'Review organization user statistics.',
+            section: 'Workspace',
+            path: APP_ROUTES.dashboardUserStatistics,
+            requirement: dashboardSectionRequirement('users.view', 'organization'),
+          },
+          {
+            id: 'dashboard-department-overview',
+            label: 'Dept overview',
+            icon: 'departments',
+            description: 'Review department overview and status.',
+            section: 'Workspace',
+            path: APP_ROUTES.dashboardDepartmentOverview,
+            requirement: dashboardSectionRequirement('departments.view'),
+          },
+        ],
       },
     ],
   },
@@ -123,15 +213,6 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         section: 'Organization',
         path: APP_ROUTES.users,
         requirement: permissionRequirement('users.view', 'organization-or-department'),
-      },
-      {
-        id: 'users-create',
-        label: 'Add a user',
-        icon: 'create',
-        description: 'Invite a user to your active organization.',
-        section: 'Organization',
-        path: APP_ROUTES.newUser,
-        requirement: permissionRequirement('users.create', 'organization'),
       },
       {
         id: 'roles',
@@ -163,21 +244,6 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
     ],
   },
   {
-    id: 'account',
-    label: 'Account',
-    items: [
-      {
-        id: 'settings',
-        label: 'Settings',
-        icon: 'settings',
-        description: 'Manage your profile, preferences, notifications, and sessions.',
-        section: 'Account',
-        path: APP_ROUTES.settings,
-        requirement: { kind: 'authenticated' },
-      },
-    ],
-  },
-  {
     id: 'requests',
     label: 'Requests',
     items: [
@@ -187,49 +253,71 @@ export const NAVIGATION_SECTIONS: readonly NavigationSection[] = [
         icon: 'requests',
         children: [
           {
-            id: 'request-list',
-            label: 'Requests',
-            icon: 'requests',
-            description: 'Request history will be limited by the backend to your authorized scope.',
-            section: 'Requests',
-            path: APP_ROUTES.requests,
-            requirement: permissionRequirement('requests.view', 'organization-or-department'),
-          },
-          {
-            id: 'my-requests',
+            id: 'my-requests-category',
             label: 'My requests',
             icon: 'requests',
-            description: 'Track requests created by you.',
-            section: 'Requests',
-            path: APP_ROUTES.myRequests,
-            requirement: permissionRequirement('requests.view', 'organization-or-department'),
+            children: [
+              {
+                id: 'my-requests',
+                label: 'My requests',
+                icon: 'requests',
+                description: 'Track requests created by you.',
+                section: 'Requests',
+                path: APP_ROUTES.myRequests,
+                requirement: permissionRequirement('requests.view', 'organization-or-department'),
+              },
+              {
+                id: 'new-request',
+                label: 'New request',
+                icon: 'create',
+                description: 'Request creation will be limited to your authorized scope.',
+                section: 'Requests',
+                path: APP_ROUTES.newRequest,
+                requirement: permissionRequirement('requests.create', 'organization-or-department'),
+              },
+            ],
           },
           {
-            id: 'new-request',
-            label: 'New request',
-            icon: 'create',
-            description: 'Request creation will be limited to your authorized scope.',
-            section: 'Requests',
-            path: APP_ROUTES.newRequest,
-            requirement: permissionRequirement('requests.create', 'organization-or-department'),
-          },
-          {
-            id: 'approvals',
-            label: 'Approvals',
-            icon: 'approvals',
-            description: 'Approval items will be returned only when assigned or delegated to you.',
-            section: 'Requests',
-            path: APP_ROUTES.approvals,
-            requirement: permissionRequirement('requests.approve', 'organization-or-department'),
-          },
-          {
-            id: 'approval-delegation',
-            label: 'Delegation',
-            icon: 'approvals',
-            description: 'Delegate eligible approval responsibilities for a defined period.',
-            section: 'Requests',
-            path: APP_ROUTES.approvalDelegation,
-            requirement: permissionRequirement('requests.approve', 'organization-or-department'),
+            id: 'requests-category',
+            label: 'Requests',
+            icon: 'requests',
+            children: [
+              {
+                id: 'request-list',
+                label: 'Requests',
+                icon: 'requests',
+                description:
+                  'Request history will be limited by the backend to your authorized scope.',
+                section: 'Requests',
+                path: APP_ROUTES.requests,
+                requirement: permissionRequirement('requests.view', 'organization-or-department'),
+              },
+              {
+                id: 'approvals',
+                label: 'Approvals',
+                icon: 'approvals',
+                description:
+                  'Approval items will be returned only when assigned or delegated to you.',
+                section: 'Requests',
+                path: APP_ROUTES.approvals,
+                requirement: permissionRequirement(
+                  'requests.approve',
+                  'organization-or-department',
+                ),
+              },
+              {
+                id: 'approval-delegation',
+                label: 'Delegations',
+                icon: 'approvals',
+                description: 'Delegate eligible approval responsibilities for a defined period.',
+                section: 'Requests',
+                path: APP_ROUTES.approvalDelegation,
+                requirement: permissionRequirement(
+                  'requests.approve',
+                  'organization-or-department',
+                ),
+              },
+            ],
           },
         ],
       },

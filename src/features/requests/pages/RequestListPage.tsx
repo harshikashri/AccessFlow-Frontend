@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Alert, Button, Card } from '@/components/ui';
+import { AppIcon } from '@/components/common/AppIcon';
+import { IconButton } from '@/components/common/IconButton';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -79,20 +81,24 @@ export function RequestListPage({ mine = false }: { mine?: boolean }) {
         description={
           mine
             ? 'Track requests you created and their approval progress.'
-            : 'Create, track, and manage requests within your authorized scope.'
+            : 'Track and manage requests within your authorized scope.'
         }
         actions={
           <div className="request-page__header-actions">
-            <Button
+            <IconButton
               variant="outline"
+              icon="refresh"
+              label="Refresh requests"
               onClick={() => void listQuery.refetch()}
               loading={listQuery.isFetching}
-            >
-              Refresh
-            </Button>
-            {canCreate && (
-              <Link className="ui-button ui-button--primary" to={APP_ROUTES.newRequest}>
-                New request
+            />
+            {canCreate && mine && (
+              <Link
+                className="user-page__add-user"
+                to={APP_ROUTES.newRequest}
+                aria-label="Create request"
+              >
+                <AppIcon name="add" size={18} />
               </Link>
             )}
           </div>

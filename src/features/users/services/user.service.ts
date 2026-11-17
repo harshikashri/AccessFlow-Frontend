@@ -6,6 +6,7 @@ import type {
   CreateUserRequest,
   UserListParams,
   UserListResponse,
+  UserRoleFilterOption,
   UserProfile,
   UpdateUserRequest,
   UserStatus,
@@ -90,12 +91,18 @@ function isPagination(value: unknown): boolean {
   );
 }
 
+function isUserRoleFilterOption(value: unknown): value is UserRoleFilterOption {
+  return isRecord(value) && typeof value.id === 'string' && typeof value.name === 'string';
+}
+
 function isUserListResponse(value: unknown): value is UserListResponse {
   return (
     isRecord(value) &&
     Array.isArray(value.users) &&
     value.users.every(isUserProfile) &&
-    isPagination(value.pagination)
+    isPagination(value.pagination) &&
+    (value.roleOptions === undefined ||
+      (Array.isArray(value.roleOptions) && value.roleOptions.every(isUserRoleFilterOption)))
   );
 }
 

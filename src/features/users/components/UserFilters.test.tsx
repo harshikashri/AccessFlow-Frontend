@@ -38,7 +38,6 @@ function renderFilters(overrides: Partial<ComponentProps<typeof UserFilters>> = 
     onDepartmentChange: vi.fn(),
     onRoleChange: vi.fn(),
     onSortByChange: vi.fn(),
-    onSortOrderChange: vi.fn(),
     onClear: vi.fn(),
   };
   render(
@@ -48,7 +47,6 @@ function renderFilters(overrides: Partial<ComponentProps<typeof UserFilters>> = 
       departmentId=""
       roleId=""
       sortBy="createdAt"
-      sortOrder="desc"
       departments={[department]}
       roles={[role]}
       departmentsLoading={false}
@@ -73,14 +71,13 @@ describe('UserFilters', () => {
     await user.selectOptions(screen.getByLabelText('Department'), 'null');
     await user.selectOptions(screen.getByLabelText('Role'), role.id);
     await user.selectOptions(screen.getByLabelText('Sort by'), 'email');
-    await user.selectOptions(screen.getByLabelText('Sort order'), 'asc');
 
     expect(callbacks.onSearchChange).toHaveBeenLastCalledWith('Taylor');
     expect(callbacks.onStatusChange).toHaveBeenCalledWith('INACTIVE');
     expect(callbacks.onDepartmentChange).toHaveBeenCalledWith('null');
     expect(callbacks.onRoleChange).toHaveBeenCalledWith(role.id);
     expect(callbacks.onSortByChange).toHaveBeenCalledWith('email');
-    expect(callbacks.onSortOrderChange).toHaveBeenCalledWith('asc');
+    expect(screen.queryByLabelText('Sort order')).toBeNull();
   });
 
   it('disables unavailable optional filters and explains how to retry them', () => {
@@ -95,6 +92,16 @@ describe('UserFilters', () => {
     expect(
       screen.getByText('Role filtering requires organization-level role access.'),
     ).toBeTruthy();
+  });
+
+  it('can omit Department while keeping the Role dropdown available', async () => {
+    const user = userEvent.setup();
+    const callbacks = renderFilters({ hideDepartmentFilter: true });
+
+    expect(screen.queryByLabelText('Department')).toBeNull();
+    expect(screen.getByLabelText('Role')).toHaveProperty('disabled', false);
+    await user.selectOptions(screen.getByLabelText('Role'), role.id);
+    expect(callbacks.onRoleChange).toHaveBeenCalledWith(role.id);
   });
 
   it('disables reference filters while options are loading', () => {

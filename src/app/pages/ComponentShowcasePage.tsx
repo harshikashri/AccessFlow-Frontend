@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { BrandMark } from '@/components/common/BrandMark';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -72,9 +73,7 @@ export function ComponentShowcasePage() {
       title="UI foundation preview"
       sidebarBrand={
         <div className="showcase-brand">
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <BrandMark />
           <span>AccessFlow</span>
         </div>
       }

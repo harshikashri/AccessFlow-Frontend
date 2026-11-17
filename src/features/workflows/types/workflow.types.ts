@@ -1,6 +1,7 @@
 import type { RequestType } from '@/features/requests/types/request.types';
 
 export type WorkflowApproverType = 'DEPARTMENT_MANAGER' | 'ROLE' | 'USER' | 'ORGANIZATION_ADMIN';
+export type WorkflowScope = 'DEPARTMENT' | 'ORGANIZATION';
 export type WorkflowApprovalMode = 'ANY' | 'ALL';
 export type WorkflowResolution = 'DIRECT' | 'CLAIM_ONE';
 export type WorkflowAssignmentScope = 'DEPARTMENT' | 'ORGANIZATION' | 'ORGANIZATION_OR_DEPARTMENT';
@@ -74,6 +75,7 @@ export interface Workflow {
   name: string;
   description: string;
   requestTypeId: string | null;
+  workflowScope: WorkflowScope;
   selectionCondition: WorkflowCondition | null;
   priority: number;
   version: number;
@@ -108,6 +110,7 @@ export interface WorkflowInput {
   name: string;
   description: string;
   requestTypeId: string | null;
+  workflowScope: WorkflowScope;
   isDefault: boolean;
   selectionCondition: WorkflowCondition | null;
   priority: number;
@@ -118,6 +121,7 @@ export interface WorkflowFormValues {
   name: string;
   description: string;
   requestTypeId: string;
+  workflowScope: WorkflowScope;
   isDefault: boolean;
   selectionCondition: WorkflowCondition | null;
   priority: number;

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
+import { IconButton } from '@/components/common/IconButton';
 import { Alert, Button, Card, Input, Select } from '@/components/ui';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -65,14 +66,13 @@ function OrganizationListContent({ userId }: { userId: string }) {
         description="Create and manage organizations across your AccessFlow platform."
         actions={
           <div className="organization-page__header-actions">
-            <Button
+            <IconButton
               variant="outline"
+              icon="refresh"
+              label="Refresh organizations"
               onClick={() => void Promise.all([listQuery.refetch(), summaryQuery.refetch()])}
               loading={listQuery.isFetching || summaryQuery.isFetching}
-              aria-label="Refresh organizations"
-            >
-              Refresh
-            </Button>
+            />
             <Button onClick={() => navigate(`${APP_ROUTES.organizations}/new`)}>
               Create organization
             </Button>

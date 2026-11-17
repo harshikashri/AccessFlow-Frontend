@@ -14,6 +14,7 @@ import {
   TableLoadingState,
 } from '@/components/ui';
 import { ErrorState } from '@/components/feedback/ErrorState';
+import { IconButton } from '@/components/common/IconButton';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -66,9 +67,13 @@ export function ApprovalInboxPage() {
         title="Approval inbox"
         description="Review requests assigned to you or delegated to you, without bypassing the workflow engine."
         actions={
-          <Button variant="outline" onClick={() => void query.refetch()} loading={query.isFetching}>
-            Refresh
-          </Button>
+          <IconButton
+            variant="outline"
+            icon="refresh"
+            label="Refresh approvals"
+            onClick={() => void query.refetch()}
+            loading={query.isFetching}
+          />
         }
       />
       <Card
@@ -170,9 +175,7 @@ export function ApprovalInboxPage() {
                           {step.status.replace('_', ' ')}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {step.request?.requesterId ? String(step.request.requesterId) : '—'}
-                      </TableCell>
+                      <TableCell>{step.request?.requesterName || '—'}</TableCell>
                       <TableCell>
                         {step.decisionAt
                           ? new Date(step.decisionAt).toLocaleDateString()

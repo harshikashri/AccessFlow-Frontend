@@ -120,6 +120,16 @@ describe('DepartmentListPage', () => {
 
     expect(await screen.findByText('Engineering')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Create department' })).toBeTruthy();
+    expect(
+      screen.queryByText(
+        'Browse departments available within your active organization and permission scope.',
+      ),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        'Search department names, filter by status, and sort the authorized results.',
+      ),
+    ).toBeNull();
 
     await user.type(screen.getByLabelText('Search departments'), 'Engineering');
     await waitFor(() =>
@@ -137,10 +147,25 @@ describe('DepartmentListPage', () => {
       ),
     );
 
+    await user.selectOptions(screen.getByLabelText('Sort by'), 'name');
+    await waitFor(() =>
+      expect(serviceMocks.list).toHaveBeenLastCalledWith(
+        expect.objectContaining({ sortBy: 'name', sortOrder: 'asc', page: 1 }),
+        expect.any(AbortSignal),
+      ),
+    );
+    expect(screen.queryByLabelText('Sort order')).toBeNull();
+
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() =>
       expect(serviceMocks.list).toHaveBeenLastCalledWith(
-        expect.objectContaining({ search: 'Engineering', status: 'ACTIVE', page: 2 }),
+        expect.objectContaining({
+          search: 'Engineering',
+          status: 'ACTIVE',
+          sortBy: 'name',
+          sortOrder: 'asc',
+          page: 2,
+        }),
         expect.any(AbortSignal),
       ),
     );

@@ -118,8 +118,17 @@ describe('RoleAssignmentDialog', () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText(/Find a user/), 'Taylor');
-    await user.click(await screen.findByRole('button', { name: /Taylor User/ }));
+    expect(
+      screen.queryByText(
+        'The backend validates active membership, the selected assignment scope, role compatibility, and your permission scope.',
+      ),
+    ).toBeNull();
+    const userSearch = screen.getByRole('combobox', { name: 'Find a user' });
+    await user.type(userSearch, 'Taylor');
+    const candidateOption = await screen.findByRole('option', { name: /Taylor User/ });
+    expect(userSearch.getAttribute('aria-expanded')).toBe('true');
+    await user.click(candidateOption);
+    expect(userSearch.getAttribute('aria-expanded')).toBe('false');
 
     expect(screen.getByText('Existing assignments could not be checked')).toBeTruthy();
     const assignButton = screen.getByRole('button', { name: 'Assign role' });

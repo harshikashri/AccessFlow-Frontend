@@ -1,16 +1,14 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Alert, Button, Checkbox, Input, Select } from '@/components/ui';
 import { Textarea } from '@/components/ui/Textarea';
-import type {
-  RoleFormErrors,
-  RoleFormValues,
-} from '@/features/roles/types/role.types';
+import type { RoleFormErrors, RoleFormValues } from '@/features/roles/types/role.types';
 import { validateRoleForm } from '@/features/roles/utils/role.utils';
 
 interface RoleFormProps {
   initialValues: RoleFormValues;
   isBuiltIn: boolean;
   isLegacyCustomRoleUnconfigured?: boolean;
+  showBasicInformationIntro?: boolean;
   isSaving: boolean;
   error?: string | null;
   children?: ReactNode;
@@ -24,6 +22,7 @@ export function RoleForm({
   initialValues,
   isBuiltIn,
   isLegacyCustomRoleUnconfigured = false,
+  showBasicInformationIntro = true,
   isSaving,
   error,
   children,
@@ -67,11 +66,16 @@ export function RoleForm({
           {error}
         </Alert>
       )}
-      <section className="role-form__section" aria-labelledby="role-basic-heading">
-        <div>
-          <h2 id="role-basic-heading">Basic information</h2>
-          <p>Role definitions belong to the active organization.</p>
-        </div>
+      <section
+        className="role-form__section"
+        aria-labelledby={showBasicInformationIntro ? 'role-basic-heading' : undefined}
+      >
+        {showBasicInformationIntro && (
+          <div>
+            <h2 id="role-basic-heading">Basic information</h2>
+            <p>Role definitions belong to the active organization.</p>
+          </div>
+        )}
         <div className="role-form__fields">
           <Input
             label="Role name"
@@ -167,12 +171,6 @@ export function RoleForm({
           )}
         </div>
       </section>
-      {isBuiltIn && (
-        <p className="role-form__note">
-          This built-in role is managed by the platform. Its name and purpose cannot be changed
-          here.
-        </p>
-      )}
       {children}
       <div className="role-form__actions">
         <Button variant="outline" type="button" onClick={onCancel} disabled={isSaving}>

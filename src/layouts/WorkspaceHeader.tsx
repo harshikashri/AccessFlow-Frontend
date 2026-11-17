@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AppIcon } from '@/components/common/AppIcon';
-import { Avatar, DropdownMenu } from '@/components/ui';
+import { BrandMark } from '@/components/common/BrandMark';
+import { DropdownMenu } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { appConfig } from '@/config/app.config';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -12,6 +13,36 @@ import {
   isPlatformSession,
 } from '@/features/authorization/navigation';
 import { APP_ROUTES } from '@/routes/route.constants';
+
+function getNestedRouteBreadcrumb(
+  pathname: string,
+): { section: string; label: string } | undefined {
+  if (pathname.startsWith(`${APP_ROUTES.requests}/`) && pathname !== APP_ROUTES.newRequest) {
+    return {
+      section: 'Requests',
+      label: pathname.endsWith('/edit') ? 'Edit request' : 'Request details',
+    };
+  }
+  if (
+    pathname.startsWith(`${APP_ROUTES.approvals}/`) &&
+    pathname !== APP_ROUTES.approvalDelegation
+  ) {
+    return { section: 'Requests', label: 'Approval details' };
+  }
+  if (pathname.startsWith(`${APP_ROUTES.departments}/`) && pathname !== APP_ROUTES.newDepartment) {
+    return {
+      section: 'Organization',
+      label: pathname.endsWith('/edit') ? 'Edit department' : 'Department details',
+    };
+  }
+  if (pathname.startsWith(`${APP_ROUTES.users}/`) && pathname !== APP_ROUTES.newUser) {
+    return {
+      section: 'Organization',
+      label: pathname.endsWith('/edit') ? 'Edit user' : 'User details',
+    };
+  }
+  return undefined;
+}
 
 export function WorkspaceBreadcrumbs() {
   const { user, authorizationStatus } = useAuth();
@@ -35,9 +66,11 @@ export function WorkspaceBreadcrumbs() {
       : location.pathname.startsWith(`${APP_ROUTES.workflows}/`)
         ? 'Workflow details'
         : undefined;
+  const nestedRouteBreadcrumb = getNestedRouteBreadcrumb(location.pathname);
   const label =
     currentItem?.label ??
     fallbackLabels[location.pathname] ??
+    nestedRouteBreadcrumb?.label ??
     organizationRouteLabel ??
     workflowRouteLabel ??
     'Page not found';
@@ -48,7 +81,9 @@ export function WorkspaceBreadcrumbs() {
         <li>
           <Link to={APP_ROUTES.root}>{appConfig.name}</Link>
         </li>
-        {currentItem?.section && <li aria-hidden="true">{currentItem.section}</li>}
+        {(currentItem?.section ?? nestedRouteBreadcrumb?.section) && (
+          <li aria-hidden="true">{currentItem?.section ?? nestedRouteBreadcrumb?.section}</li>
+        )}
         <li aria-current="page">{label}</li>
       </ol>
     </nav>
@@ -69,30 +104,142 @@ function NotificationsEntry() {
   );
 }
 
-function ProfileMenu() {
-  const { user, logout } = useAuth();
+export function WorkspaceSidebarAccountActions() {
+  const { logout, logoutAll } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  async function handleSignOut(allDevices: boolean) {
+    setActionError(null);
+    setOpen(false);
+    try {
+      if (allDevices) {
+        await logoutAll();
+      } else {
+        await logout();
+      }
+      navigate(APP_ROUTES.signIn, { replace: true });
+    } catch (error) {
+      const message = getAuthErrorMessage(error, 'We could not sign you out. Please try again.');
+      setActionError(message);
+      setOpen(true);
+      showToast({
+        title: allDevices ? 'Unable to log out of all devices' : 'Unable to sign out',
+        description: message,
+        variant: 'error',
+      });
+    }
+  }
+
+  return (
+    <div
+      className="workspace-sidebar-actions"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={(event) => {
+        if (
+          !(document.activeElement instanceof Node) ||
+          !event.currentTarget.contains(document.activeElement)
+        ) {
+          setOpen(false);
+        }
+      }}
+      onFocus={() => setOpen(true)}
+      onBlur={(event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        ) {
+          setOpen(false);
+        }
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          triggerRef.current?.focus();
+          setOpen(false);
+        } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          const menuItems =
+            menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]');
+          if (!menuItems?.length) return;
+          event.preventDefault();
+          const activeIndex = Array.from(menuItems).findIndex(
+            (item) => item === document.activeElement,
+          );
+          const direction = event.key === 'ArrowDown' ? 1 : -1;
+          const nextIndex =
+            activeIndex < 0
+              ? direction > 0
+                ? 0
+                : menuItems.length - 1
+              : (activeIndex + direction + menuItems.length) % menuItems.length;
+          menuItems[nextIndex]?.focus();
+        }
+      }}
+    >
+      <button
+        ref={triggerRef}
+        className="workspace-sidebar-actions__trigger"
+        type="button"
+        aria-label="Sign out options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Sign out options"
+        onClick={() => setOpen((current) => !current)}
+      >
+        <AppIcon name="logout" size={19} />
+      </button>
+      {open && (
+        <div
+          ref={menuRef}
+          className="workspace-sidebar-actions__menu"
+          role="menu"
+          aria-label="Sign out options"
+        >
+          <button type="button" role="menuitem" onClick={() => void handleSignOut(false)}>
+            Log out
+          </button>
+          <button type="button" role="menuitem" onClick={() => void handleSignOut(true)}>
+            Log out of all devices
+          </button>
+          {actionError && <p role="alert">{actionError}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProfileMenu() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
 
   if (!user) return null;
 
-  async function handleLogout() {
-    setLogoutError(null);
+  async function handleSignOut() {
     try {
       await logout();
       navigate(APP_ROUTES.signIn, { replace: true });
     } catch (error) {
       const message = getAuthErrorMessage(error, 'We could not sign you out. Please try again.');
-      setLogoutError(message);
-      showToast({ title: 'Unable to sign out', description: message, variant: 'error' });
+      showToast({
+        title: 'Unable to sign out',
+        description: message,
+        variant: 'error',
+      });
     }
   }
 
   const items = [
     { label: 'My profile', onSelect: () => navigate(APP_ROUTES.profile) },
     { label: 'Account settings', onSelect: () => navigate(APP_ROUTES.settings) },
-    { label: 'Sign out', onSelect: () => void handleLogout(), destructive: true },
+    {
+      label: 'Log out',
+      destructive: true,
+      onSelect: () => void handleSignOut(),
+    },
   ];
 
   return (
@@ -100,22 +247,11 @@ function ProfileMenu() {
       <DropdownMenu
         label="Account menu"
         align="end"
-        trigger={
-          <span className="workspace-profile__trigger">
-            <Avatar name={user.name} size="sm" />
-            <span className="workspace-profile__details">
-              <span className="workspace-profile__name">{user.name}</span>
-              <span className="workspace-profile__email">{user.email}</span>
-            </span>
-          </span>
-        }
+        triggerLabel="Open profile menu"
+        showChevron={false}
+        trigger={<AppIcon name="profile" size={20} />}
         items={items}
       />
-      {logoutError && (
-        <span className="sr-only" role="alert">
-          {logoutError}
-        </span>
-      )}
     </div>
   );
 }
@@ -134,9 +270,7 @@ export function WorkspaceBrand() {
 
   return (
     <Link to={APP_ROUTES.root} className="workspace-brand" aria-label={`${appConfig.name} home`}>
-      <span className="workspace-brand__mark" aria-hidden="true">
-        A
-      </span>
+      <BrandMark />
       <span className="workspace-brand__name">{appConfig.name}</span>
       {user && isPlatformSession(user) && (
         <span className="workspace-brand__context">Platform</span>

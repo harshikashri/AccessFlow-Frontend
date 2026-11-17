@@ -216,7 +216,8 @@ describe('organization create, edit, and details flows', () => {
 
     expect(await screen.findByText('Total members')).toBeTruthy();
     expect(screen.getByText('12')).toBeTruthy();
-    expect(screen.getByText(/activity history are not exposed/)).toBeTruthy();
+    expect(screen.queryByText(/Additional organization records/)).toBeNull();
+    expect(screen.queryByText(/activity history are not exposed/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Deactivate' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(screen.getByText(/Organization members will not be able to sign in/)).toBeTruthy();

@@ -50,12 +50,8 @@ export function WorkflowCreatePage() {
       <PageHeader
         eyebrow="Workflows"
         title="Create workflow"
-        description="Configure a request-type workflow or the organization fallback."
-        actions={
-          <Button variant="outline" onClick={() => navigate(APP_ROUTES.workflows)}>
-            Back to workflows
-          </Button>
-        }
+        description="Configure approvals for department-level or organization-level requests."
+        backLink={{ to: APP_ROUTES.workflows, label: 'Back to workflows' }}
       />
       {typesQuery.isError || rolesQuery.isError ? (
         <ErrorState

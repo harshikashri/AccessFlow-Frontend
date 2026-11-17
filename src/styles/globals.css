@@ -114,10 +114,12 @@ h3 {
   width: 2.25rem;
   height: 2.25rem;
   place-items: center;
-  border-radius: var(--radius-md);
-  color: #fff;
-  background: var(--color-primary);
-  font-size: var(--font-size-lg);
+  border: 1px solid #ddcbb8;
+  border-radius: 0.75rem;
+  color: #6b4f3a;
+  background: #efe4d7;
+  --brand-mark-accent: #aa704d;
+  --brand-mark-surface: #efe4d7;
 }
 
 .eyebrow {

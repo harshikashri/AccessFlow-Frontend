@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { BackLink } from '@/components/common/BackLink';
 import { Alert, Button, Card } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -74,14 +75,10 @@ export function RoleEditPage() {
   if (!validRoleId) {
     return (
       <div className="workspace-page role-page">
+        <BackLink to={APP_ROUTES.roles} label="Back to roles" />
         <ErrorState
           title="Role link is invalid"
           description="The role identifier in this URL is not valid."
-          action={
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.roles)}>
-              Back to roles
-            </Button>
-          }
         />
       </div>
     );
@@ -186,15 +183,8 @@ export function RoleEditPage() {
         <span aria-hidden="true">/</span>
         <span aria-current="page">Edit</span>
       </nav>
-      <PageHeader
-        eyebrow={builtIn ? 'Built-in role' : 'Custom role'}
-        title={`Edit ${role.name}`}
-        description="Role details and permission changes are saved through separate backend operations."
-      />
-      <Card
-        title="Role details"
-        description="Only fields allowed by the existing role API are editable."
-      >
+      <PageHeader eyebrow={builtIn ? 'Built-in role' : 'Custom role'} title={`Edit ${role.name}`} />
+      <Card>
         <RoleForm
           key={role.id}
           initialValues={{
@@ -204,6 +194,7 @@ export function RoleEditPage() {
             assignmentScopes: getRoleSupportedScopes(role),
           }}
           isBuiltIn={builtIn}
+          showBasicInformationIntro={false}
           isLegacyCustomRoleUnconfigured={
             role.roleType === 'CUSTOM' && getRoleSupportedScopes(role).length === 0
           }
@@ -215,11 +206,7 @@ export function RoleEditPage() {
 
       <Card
         title="Role permissions"
-        description={
-          editablePermissions
-            ? 'Changes affect all active assignments for this role on subsequent authorization checks.'
-            : 'This built-in role does not allow permission changes through the current backend API.'
-        }
+        description="These are the permissions configured for this role."
       >
         {permissionQuery.isPending ? (
           <LoadingState label="Loading permission definitions" />
@@ -238,11 +225,6 @@ export function RoleEditPage() {
             {permissionError && (
               <Alert variant="error" title="Permission changes were not saved">
                 {permissionError}
-              </Alert>
-            )}
-            {builtIn && !editablePermissions && (
-              <Alert variant="information" title="Permission editing is protected">
-                The backend protects this built-in role from permission changes.
               </Alert>
             )}
             {builtIn && editablePermissions && (

@@ -1,17 +1,25 @@
 import { NavLink } from 'react-router-dom';
 import { Card } from '@/components/ui';
 import { APP_ROUTES } from '@/routes/route.constants';
+import { useAuth } from '@/features/auth/context/useAuth';
+import { isPlatformSession } from '@/features/authorization/navigation';
 
-const links = [
-  [APP_ROUTES.settings, 'Overview'],
+const settingsLinks = [
   [`${APP_ROUTES.settings}/profile`, 'Profile'],
-  [`${APP_ROUTES.settings}/preferences`, 'Preferences'],
-  [`${APP_ROUTES.settings}/notifications`, 'Notifications'],
-  [`${APP_ROUTES.settings}/security`, 'Security and sessions'],
+  [`${APP_ROUTES.settings}/security`, 'Security'],
   [`${APP_ROUTES.settings}/organization`, 'Organization'],
 ] as const;
 
 export function SettingsLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const platformSession = isPlatformSession(user);
+  const links = platformSession
+    ? [
+        [`${APP_ROUTES.settings}/profile`, 'Profile'],
+        [`${APP_ROUTES.settings}/security`, 'Security'],
+      ]
+    : settingsLinks;
+
   return (
     <div className="settings-layout">
       <aside className="settings-sidebar">

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AppIcon } from '@/components/common/AppIcon';
 import { Alert, Button, Card } from '@/components/ui';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import { hasPermission } from '@/features/authorization/permissions';
+import { useRoleDetailsByIds } from '@/features/roles/hooks/useRoles';
 import { useRequestTypes } from '@/features/requests/hooks/useRequests';
 import { APP_ROUTES } from '@/routes/route.constants';
 import { useSetWorkflowStatus, useWorkflowDetails } from '../hooks/useWorkflows';
@@ -25,8 +27,22 @@ export function WorkflowDetailsPage() {
   const canManage = Boolean(
     user && hasPermission(user.authorization, 'workflows.manage', 'organization'),
   );
+  const canViewRoles = Boolean(
+    user && hasPermission(user.authorization, 'roles.view', 'organization'),
+  );
   const query = useWorkflowDetails(user?.id ?? '', organizationId, workflowId, canView);
   const typesQuery = useRequestTypes(user?.id ?? '', organizationId, canView);
+  const approvalRoleIds =
+    query.data?.stages.flatMap((stage) =>
+      stage.assignment.roleId ? [stage.assignment.roleId] : [],
+    ) ?? [];
+  const roleQueries = useRoleDetailsByIds(
+    user?.id ?? '',
+    organizationId,
+    approvalRoleIds,
+    canViewRoles,
+  );
+  const rolesError = roleQueries.find((roleQuery) => roleQuery.isError);
   const statusMutation = useSetWorkflowStatus(user?.id ?? '', organizationId, workflowId);
 
   if (
@@ -61,6 +77,11 @@ export function WorkflowDetailsPage() {
   }
   const workflow = query.data;
   const requestType = typesQuery.data?.items.find((type) => type.id === workflow.requestTypeId);
+  const roleNames = Object.fromEntries(
+    roleQueries.flatMap((roleQuery) =>
+      roleQuery.data ? [[roleQuery.data.id, roleQuery.data.name]] : [],
+    ),
+  );
 
   async function toggleStatus() {
     if (workflow.isActive && workflow.isDefault) return;
@@ -90,11 +111,13 @@ export function WorkflowDetailsPage() {
         eyebrow="Workflow details"
         title={workflow.name}
         description={workflow.description || 'Approval policy details and stage sequence.'}
+        backLink={{ to: APP_ROUTES.workflows, label: 'Back to workflows' }}
         actions={
           <div className="workflow-page__actions">
             {canManage && (
               <Button
                 variant="outline"
+                leadingIcon={<AppIcon name="edit" size={16} />}
                 onClick={() => navigate(`${APP_ROUTES.workflows}/${workflow.id}/edit`)}
               >
                 Edit
@@ -109,15 +132,26 @@ export function WorkflowDetailsPage() {
                 {workflow.isActive ? 'Deactivate' : 'Activate'}
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.workflows)}>
-              Back
-            </Button>
           </div>
         }
       />
       {actionError && (
         <Alert variant="error" title="Workflow action failed">
           {actionError}
+        </Alert>
+      )}
+      {canViewRoles && rolesError && (
+        <Alert variant="warning" title="Approval role names could not be loaded">
+          {getAuthErrorMessage(rolesError.error, 'The role directory is unavailable.')}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              roleQueries.forEach((roleQuery) => void roleQuery.refetch());
+            }}
+          >
+            Retry
+          </Button>
         </Alert>
       )}
       <div className="workflow-detail-grid">
@@ -127,6 +161,14 @@ export function WorkflowDetailsPage() {
               <dt>Request type</dt>
               <dd>
                 {requestType?.name ?? (workflow.isDefault ? 'Organization default' : 'Unavailable')}
+              </dd>
+            </div>
+            <div>
+              <dt>Request routing scope</dt>
+              <dd>
+                {workflow.workflowScope === 'ORGANIZATION'
+                  ? 'Organization-level requests'
+                  : 'Department-level requests'}
               </dd>
             </div>
             <div>
@@ -168,11 +210,13 @@ export function WorkflowDetailsPage() {
             </div>
           </dl>
         </Card>
-        <Card
-          title="Approval sequence"
-          description="The runtime evaluates these stages in order and applies conditions on submitted request data."
-        >
-          <WorkflowStageList stages={workflow.stages} requestFields={requestType?.fields ?? []} />
+        <Card title="Approval sequence">
+          <WorkflowStageList
+            stages={workflow.stages}
+            requestFields={requestType?.fields ?? []}
+            roleNames={roleNames}
+            roleNamesLoading={canViewRoles && roleQueries.some((roleQuery) => roleQuery.isPending)}
+          />
         </Card>
       </div>
     </div>

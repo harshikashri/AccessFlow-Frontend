@@ -48,6 +48,26 @@ const list = async (params: AuditListParams, signal?: AbortSignal): Promise<Audi
   return data as unknown as AuditListResponse;
 };
 
+const listPlatform = async (
+  params: AuditListParams,
+  signal?: AbortSignal,
+): Promise<AuditListResponse> => {
+  const response = await apiClient.get<ApiEnvelope<unknown>>('/audit-logs/platform', {
+    params: paramsOf(params),
+    ...(signal ? { signal } : {}),
+  });
+  const data = dataOf(response);
+  if (
+    !isRecord(data) ||
+    !Array.isArray(data.items) ||
+    !data.items.every(isAuditLog) ||
+    !isRecord(data.pagination)
+  ) {
+    throw new Error('The Super Admin audit log list returned an unsupported response.');
+  }
+  return data as unknown as AuditListResponse;
+};
+
 const get = async (id: string): Promise<AuditLog> => {
   const response = await apiClient.get<ApiEnvelope<unknown>>(
     `/audit-logs/${encodeURIComponent(id)}`,
@@ -80,4 +100,4 @@ const exportCsv = async (params: AuditListParams) => {
   return response.data;
 };
 
-export const auditLogService = { list, get, statistics, exportCsv };
+export const auditLogService = { list, listPlatform, get, statistics, exportCsv };

@@ -66,6 +66,8 @@ describe('UserForm', () => {
       />,
     );
 
+    expect(screen.queryByText('Department membership is optional.')).toBeNull();
+    expect(screen.getByLabelText('Department')).toBeTruthy();
     await user.type(screen.getByLabelText(/Full name/), 'Taylor User');
     await user.type(screen.getByLabelText(/Email address/), 'taylor@example.com');
     await user.selectOptions(screen.getByLabelText('Role'), role.id);

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Alert, Button, Card, Input, Modal } from '@/components/ui';
 import { ErrorState } from '@/components/feedback/ErrorState';
+import { IconButton } from '@/components/common/IconButton';
 import { PageHeader } from '@/components/common/PageHeader';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -124,9 +125,12 @@ export function ApprovalDetailsPage() {
             : 'Review the request and record your decision.'
         }
         actions={
-          <Button variant="outline" onClick={() => void query.refetch()}>
-            Refresh
-          </Button>
+          <IconButton
+            variant="outline"
+            icon="refresh"
+            label="Refresh approval"
+            onClick={() => void query.refetch()}
+          />
         }
       />
       {error && (

@@ -55,7 +55,7 @@ const analyticsResponse: Record<DashboardAnalyticsProvider, unknown> = {
     decisions: [],
     stages: [],
     workload: {},
-    performance: {},
+    performance: { delegatedDecisions: 0 },
     dateRange,
   },
   DEPARTMENTS: {
@@ -167,5 +167,20 @@ describe('dashboard service', () => {
 
     apiClientMock.get.mockResolvedValueOnce(envelope({ dashboardType: 'DYNAMIC' }));
     await expect(dashboardService.getConfiguration()).rejects.toThrow(/unsupported response/);
+
+    apiClientMock.get.mockResolvedValueOnce(
+      envelope({
+        scope: 'AUTHORIZED_APPROVAL_ASSIGNMENTS',
+        approvalStatusDistribution: [],
+        decisions: [],
+        stages: [],
+        workload: {},
+        performance: {},
+        dateRange,
+      }),
+    );
+    await expect(dashboardService.getAnalytics('APPROVALS', defaultFilter)).rejects.toThrow(
+      /unsupported response/,
+    );
   });
 });

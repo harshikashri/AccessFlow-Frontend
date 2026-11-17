@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { IconButton } from '@/components/common/IconButton';
 import { Alert, Button, Modal } from '@/components/ui';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import { useBulkUserImport } from '@/features/users/hooks/useUsers';
@@ -330,13 +331,13 @@ export function BulkImportDialog({
             </Alert>
           )}
           <div className="bulk-import-actions">
-            <Button
+            <IconButton
               variant="outline"
+              icon="arrow-left"
+              label="Back to preview"
               onClick={() => setShowConfirmation(false)}
               disabled={isPending}
-            >
-              Back to preview
-            </Button>
+            />
             <Button
               variant="primary"
               onClick={() => void confirmImport()}

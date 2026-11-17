@@ -9,6 +9,7 @@ import {
   formatDashboardKpi,
   getAnalyticsProviders,
   getAuthorizedDashboardWidgets,
+  getDashboardSectionWidgets,
   getDashboardKpis,
   isValidDashboardDateFilter,
 } from '@/features/dashboard/utils/dashboard.utils';
@@ -84,6 +85,51 @@ describe('dashboard utilities', () => {
     ]);
   });
 
+  it('filters organization dashboard subsections to their configured widget', () => {
+    const user = createTenantUser();
+    user.authorization.organizationPermissions = [
+      'dashboard.view',
+      'requests.view',
+      'requests.approve',
+      'users.view',
+      'departments.view',
+    ];
+    const widgets = [
+      widget({ key: 'REQUEST_SUMMARY' }),
+      widget({ key: 'APPROVAL_SUMMARY', analyticsProvider: 'APPROVALS' }),
+      widget({ key: 'APPROVAL_ACTIVITY', analyticsProvider: 'APPROVALS' }),
+      widget({ key: 'USER_STATISTICS', analyticsProvider: 'USERS' }),
+      widget({ key: 'DEPARTMENT_OVERVIEW', analyticsProvider: 'DEPARTMENTS' }),
+    ];
+    const configuration: DashboardConfiguration = {
+      dashboardType: 'DYNAMIC',
+      userContext: { userId: user.id, organizationId: user.organizationId },
+      widgets,
+      availableFilters: { dateRange: ['LAST_30_DAYS'] },
+      dateRangeOptions: {
+        timeZone: 'UTC',
+        interval: '[fromDate, toDate)',
+        maxCustomRangeDays: 366,
+      },
+    };
+
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'request-summary').map(({ key }) => key),
+    ).toEqual(['REQUEST_SUMMARY']);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'approval-summary').map(({ key }) => key),
+    ).toEqual(['APPROVAL_SUMMARY']);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'approval-activity').map(({ key }) => key),
+    ).toEqual(['APPROVAL_ACTIVITY']);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'user-statistics').map(({ key }) => key),
+    ).toEqual(['USER_STATISTICS']);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'department-overview').map(({ key }) => key),
+    ).toEqual(['DEPARTMENT_OVERVIEW']);
+  });
+
   it('shows only analytics providers and KPI groups configured as implemented', () => {
     const widgets = [
       widget({ key: 'REQUEST_SUMMARY' }),
@@ -112,6 +158,80 @@ describe('dashboard utilities', () => {
         widgets,
       ).map((item) => item.key),
     ).toEqual(['MY_TOTAL_REQUESTS', 'PENDING_MY_APPROVAL']);
+  });
+
+  it('filters platform dashboard widgets into their dedicated analytics sections', () => {
+    const user: AuthenticatedUser = {
+      ...createTenantUser(),
+      platformRole: 'SUPER_ADMIN',
+      organizationId: null,
+    };
+    const configuration: DashboardConfiguration = {
+      dashboardType: 'PLATFORM',
+      userContext: { userId: user.id, organizationId: null },
+      widgets: [
+        widget({ key: 'PLATFORM_OVERVIEW', scope: 'PLATFORM', kpiProvider: 'PLATFORM' }),
+        widget({
+          key: 'ORGANIZATION_ANALYTICS',
+          scope: 'PLATFORM',
+          kpiProvider: null,
+          analyticsProvider: 'ORGANIZATIONS',
+        }),
+        widget({
+          key: 'USER_ANALYTICS',
+          scope: 'PLATFORM',
+          kpiProvider: null,
+          analyticsProvider: 'USERS',
+        }),
+        widget({
+          key: 'PLATFORM_USAGE_ANALYTICS',
+          scope: 'PLATFORM',
+          kpiProvider: null,
+          analyticsProvider: 'REQUESTS',
+        }),
+        widget({
+          key: 'PLATFORM_ACTIVITY',
+          scope: 'PLATFORM',
+          kpiProvider: null,
+          analyticsProvider: 'ACTIVITY',
+        }),
+        widget({
+          key: 'DEPARTMENT_ANALYTICS',
+          scope: 'PLATFORM',
+          kpiProvider: null,
+          analyticsProvider: 'DEPARTMENTS',
+        }),
+      ],
+      availableFilters: { dateRange: ['LAST_30_DAYS'] },
+      dateRangeOptions: {
+        timeZone: 'UTC',
+        interval: '[fromDate, toDate)',
+        maxCustomRangeDays: 366,
+      },
+    };
+
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'overview').map((item) => item.key),
+    ).toEqual([
+      'PLATFORM_OVERVIEW',
+      'ORGANIZATION_ANALYTICS',
+      'USER_ANALYTICS',
+      'PLATFORM_USAGE_ANALYTICS',
+    ]);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'organization-analytics').map(
+        (item) => item.key,
+      ),
+    ).toEqual(['ORGANIZATION_ANALYTICS']);
+    expect(
+      getDashboardSectionWidgets(configuration, user, 'user-analytics').map((item) => item.key),
+    ).toEqual(['USER_ANALYTICS']);
+    const platformUsage = getDashboardSectionWidgets(configuration, user, 'platform-usage');
+    expect(platformUsage.map((item) => item.key)).toEqual([
+      'PLATFORM_USAGE_ANALYTICS',
+      'PLATFORM_ACTIVITY',
+    ]);
+    expect(getAnalyticsProviders(platformUsage)).toEqual(['REQUESTS', 'ACTIVITY']);
   });
 
   it('formats unspecified amounts without inventing a currency', () => {

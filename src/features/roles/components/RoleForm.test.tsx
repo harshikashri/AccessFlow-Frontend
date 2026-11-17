@@ -29,7 +29,9 @@ describe('RoleForm assignment scopes', () => {
     await user.click(screen.getByRole('button', { name: 'Save role details' }));
 
     expect(
-      await screen.findByText('Select at least one supported assignment scope for this custom role.'),
+      await screen.findByText(
+        'Select at least one supported assignment scope for this custom role.',
+      ),
     ).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
 
@@ -81,12 +83,20 @@ describe('RoleForm assignment scopes', () => {
           assignmentScopes: [],
         }}
         isBuiltIn
+        showBasicInformationIntro={false}
         isSaving={false}
         onCancel={vi.fn()}
         onSubmit={onSubmit}
       />,
     );
 
+    expect(screen.queryByText('Basic information')).toBeNull();
+    expect(screen.queryByText('Role definitions belong to the active organization.')).toBeNull();
+    expect(
+      screen.queryByText(
+        'This built-in role is managed by the platform. Its name and purpose cannot be changed here.',
+      ),
+    ).toBeNull();
     expect(screen.queryByText('Supported assignment scopes')).toBeNull();
     await user.clear(screen.getByLabelText('Description'));
     await user.type(screen.getByLabelText('Description'), 'Updated details');

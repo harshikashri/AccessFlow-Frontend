@@ -1,8 +1,25 @@
-import type { AuthorizationInfo, PermissionScope } from './authorization.types';
+import type {
+  AuthorizationInfo,
+  AuthorizationRoleType,
+  PermissionScope,
+  RolePermissionSet,
+} from './authorization.types';
 import { PERMISSION_IDS } from './permission-catalog';
 import type { PermissionId } from './permission-catalog';
 
 const permissionIdSet: ReadonlySet<string> = new Set(PERMISSION_IDS);
+const roleTypeSet: ReadonlySet<string> = new Set([
+  'ORGANIZATION_ADMIN',
+  'DEPARTMENT_MANAGER',
+  'EMPLOYEE',
+  'FINANCE_APPROVER',
+  'CUSTOM',
+]);
+const scopeTypeSet: ReadonlySet<string> = new Set(['ORGANIZATION', 'DEPARTMENT']);
+
+function isAuthorizationRoleType(value: unknown): value is AuthorizationRoleType {
+  return typeof value === 'string' && roleTypeSet.has(value);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -22,8 +39,35 @@ function isPermissionArray(value: unknown): value is PermissionId[] {
   );
 }
 
+function isRolePermissionArray(value: unknown): value is RolePermissionSet[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        isRecord(item) &&
+        typeof item.roleName === 'string' &&
+        item.roleName.trim().length > 0 &&
+        isAuthorizationRoleType(item.roleType) &&
+        typeof item.scopeType === 'string' &&
+        scopeTypeSet.has(item.scopeType) &&
+        isPermissionArray(item.permissions),
+    )
+  );
+}
+
 export function isAuthorizationInfo(value: unknown): value is AuthorizationInfo {
   if (!isRecord(value) || !Array.isArray(value.platformPermissions)) {
+    return false;
+  }
+
+  if (
+    value.roleTypes !== undefined &&
+    (!Array.isArray(value.roleTypes) || !value.roleTypes.every(isAuthorizationRoleType))
+  ) {
+    return false;
+  }
+
+  if (value.rolePermissions !== undefined && !isRolePermissionArray(value.rolePermissions)) {
     return false;
   }
 
@@ -40,6 +84,17 @@ export function isAuthorizationInfo(value: unknown): value is AuthorizationInfo 
       /^[a-f\d]{24}$/i.test(departmentId) &&
       isPermissionArray(permissions) &&
       permissions.length > 0,
+  );
+}
+
+export function isDepartmentMember(authorization: AuthorizationInfo | null | undefined): boolean {
+  return (
+    isAuthorizationInfo(authorization) &&
+    authorization.roleTypes?.includes('EMPLOYEE') === true &&
+    authorization.roleTypes.includes('CUSTOM') === false &&
+    Object.values(authorization.departmentPermissions).some((permissions) =>
+      permissions.includes('users.view'),
+    )
   );
 }
 

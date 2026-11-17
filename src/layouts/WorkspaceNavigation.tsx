@@ -1,7 +1,16 @@
-import { NavLink } from 'react-router-dom';
+import { useId, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { AppIcon } from '@/components/common/AppIcon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import type { NavigationItem, NavigationSection } from '@/features/authorization/navigation.config';
+
+function hasActiveDescendant(item: NavigationItem, pathname: string): boolean {
+  return (
+    item.children?.some(
+      (child) => child.path === pathname || hasActiveDescendant(child, pathname),
+    ) ?? false
+  );
+}
 
 interface WorkspaceNavigationProps {
   sections: readonly NavigationSection[];
@@ -35,23 +44,45 @@ function NavigationLink({ item, collapsed }: { item: NavigationItem; collapsed: 
   );
 }
 
-function NavigationItemView({ item, collapsed }: { item: NavigationItem; collapsed: boolean }) {
-  if (item.children?.length) {
-    return (
-      <div className="workspace-nav__group">
-        <div className="workspace-nav__group-title" title={collapsed ? item.label : undefined}>
-          <AppIcon name={item.icon} size={19} />
-          <span className="workspace-nav__label">{item.label}</span>
-        </div>
-        <div className="workspace-nav__children">
-          {item.children.map((child) => (
-            <NavigationItemView key={child.id} item={child} collapsed={collapsed} />
-          ))}
-        </div>
-      </div>
-    );
-  }
+function NavigationGroup({ item, collapsed }: { item: NavigationItem; collapsed: boolean }) {
+  const location = useLocation();
+  const submenuId = useId();
+  const children = item.children ?? [];
+  const [expanded, setExpanded] = useState(() => hasActiveDescendant(item, location.pathname));
 
+  return (
+    <div className={`workspace-nav__group${expanded ? ' workspace-nav__group--expanded' : ''}`}>
+      <div className="workspace-nav__group-heading">
+        {item.path ? (
+          <NavigationLink item={item} collapsed={collapsed} />
+        ) : (
+          <div className="workspace-nav__group-title" title={collapsed ? item.label : undefined}>
+            <AppIcon name={item.icon} size={19} />
+            <span className="workspace-nav__label">{item.label}</span>
+          </div>
+        )}
+        <button
+          className="workspace-nav__toggle"
+          type="button"
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${item.label} submenu`}
+          aria-expanded={expanded}
+          aria-controls={submenuId}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          <AppIcon name="chevron" size={16} />
+        </button>
+      </div>
+      <div className="workspace-nav__children" id={submenuId} hidden={!expanded}>
+        {children.map((child) => (
+          <NavigationItemView key={child.id} item={child} collapsed={collapsed} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NavigationItemView({ item, collapsed }: { item: NavigationItem; collapsed: boolean }) {
+  if (item.children?.length) return <NavigationGroup item={item} collapsed={collapsed} />;
   return <NavigationLink item={item} collapsed={collapsed} />;
 }
 

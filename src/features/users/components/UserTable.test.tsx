@@ -107,14 +107,48 @@ describe('UserTable', () => {
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('checkbox', { name: 'Select all users on this page' }));
+    await user.click(screen.getByRole('checkbox', { name: 'All users on this page' }));
 
     expect(onSelectPage).toHaveBeenCalledWith(
       [otherProfile.id, inactiveMembershipProfile.id],
       true,
     );
     expect(screen.getByLabelText('Taylor User cannot be selected')).toBeTruthy();
-    expect(screen.getByRole('checkbox', { name: 'Select Morgan User' })).toBeTruthy();
-    expect(screen.getByRole('checkbox', { name: 'Select Jordan User' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Morgan User' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Jordan User' })).toBeTruthy();
+  });
+
+  it('keeps Department Member directory rows non-interactive and hides actions', () => {
+    const departmentMember: AuthenticatedUser = {
+      ...actor,
+      authorization: {
+        platformPermissions: [],
+        organizationPermissions: [],
+        departmentPermissions: {
+          '64b000000000000000000030': ['users.view'],
+        },
+        roleTypes: ['EMPLOYEE'],
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <UserTable
+          users={[profile]}
+          actor={departmentMember}
+          isLoading={false}
+          hasFilters={false}
+          canCreate={false}
+          readOnlyDirectory
+          onClearFilters={vi.fn()}
+          onSetMembershipStatus={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Taylor User' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'View' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).toBeNull();
+    expect(screen.getByText('Taylor User').tagName).toBe('SPAN');
   });
 });

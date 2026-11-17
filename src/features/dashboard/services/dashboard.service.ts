@@ -195,7 +195,10 @@ function isDashboardAnalyticsData(
       hasRows(value, 'decisions') &&
       hasRows(value, 'stages') &&
       isRecord(value.workload) &&
-      isRecord(value.performance)
+      isRecord(value.performance) &&
+      typeof value.performance.delegatedDecisions === 'number' &&
+      Number.isFinite(value.performance.delegatedDecisions) &&
+      value.performance.delegatedDecisions >= 0
     );
   }
   if (provider === 'DEPARTMENTS') {

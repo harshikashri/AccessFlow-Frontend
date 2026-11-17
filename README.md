@@ -204,7 +204,7 @@ The approval APIs used by the frontend (relative to `/api`) are:
 
 Audit Logs are available at `/audit-logs` and `/audit-logs/:auditLogId` for users with effective `audit_logs.view` access; platform sessions can review platform audit records. The frontend uses backend-filtered, paginated results and safe detail/export responses.
 
-Settings are available at `/settings`, `/settings/profile`, `/settings/preferences`, `/settings/notifications`, `/settings/security`, and `/settings/organization`. Profile, preferences, notification preferences, active sessions, session revocation, and password change use the authenticated user's backend context. Organization settings are read-only here because organization name/status changes remain owned by the existing organization-management API.
+Settings are available at `/settings`, `/settings/profile`, `/settings/preferences`, `/settings/notifications`, `/settings/security`, and `/settings/organization`. Profile, preferences, notification preferences, active sessions, and session revocation use the authenticated user's backend context. Password changes are completed only through the email reset flow: Security requests a one-time link, and the password can be changed with its valid token. Organization settings are read-only here because organization name/status changes remain owned by the existing organization-management API.
 
 Phase 11 API endpoints used by the frontend:
 
@@ -219,8 +219,9 @@ Phase 11 API endpoints used by the frontend:
 | `GET/PATCH /settings/notifications`         | Current-user notification preference retrieval and update.     |
 | `GET /settings/sessions`                    | Current user's safe active-session list.                       |
 | `POST /settings/sessions/:sessionId/revoke` | Revoke one of the current user's sessions.                     |
-| `POST /settings/security/password`          | Change password and revoke other sessions.                     |
 | `GET /settings/organization`                | Read current organization context.                             |
+| `POST /auth/forgot-password`                | Request password reset instructions by email.                  |
+| `POST /auth/reset-password`                 | Change password using a valid email token and revoke sessions.  |
 
 Audit records remain append-only through the Mongoose model hooks. Existing Phase 5–10 services already write transactional audit events for organization, department, user, role, request, workflow, approval, and delegation operations; Phase 11 adds retrieval, redaction, export, successful-login/logout, and settings/security events.
 
@@ -282,6 +283,8 @@ The dashboard uses the existing authenticated Axios client and TanStack Query. A
 
 The backend widget configuration is the source of truth for visible dashboard content. Tenant widgets map as follows: `REQUEST_SUMMARY` → request KPIs/analytics; `APPROVAL_SUMMARY` and `APPROVAL_ACTIVITY` → approval KPIs/analytics; `USER_STATISTICS` → user KPIs/analytics; `DEPARTMENT_OVERVIEW` → department KPIs/analytics; `ROLE_OVERVIEW` → role KPIs (role analytics is deferred); `AUDIT_ACTIVITY` → recent activity (its KPI provider is deferred). `REQUEST_CREATE` is a deferred data widget and may only link to the existing request placeholder when `requests.create` is effective.
 
+Organization dashboard navigation places Request summary, Approval summary, Approval activity, User statistics, and Dept overview beneath Dashboard. Each subsection is permission-gated and renders only its corresponding configured widget. The approval-decision chart counts outcome categories once; delegated decisions are shown separately.
+
 Platform widgets map as follows: `PLATFORM_OVERVIEW` → platform KPIs; `ORGANIZATION_ANALYTICS` → organization analytics; `USER_ANALYTICS` → platform user analytics; `PLATFORM_USAGE_ANALYTICS` → platform request analytics; `DEPARTMENT_ANALYTICS` → platform department analytics; `PLATFORM_ACTIVITY` → platform recent activity. Deferred or unknown widgets are not given fabricated values.
 
 Tenant dashboard authorization and scopes remain enforced by the backend and are also reflected in the existing `/auth/me` permission helpers. Department Managers and Employees receive personal/authorized request-history scope, not an assumed department-wide view. Approval analytics is limited to authorized assigned/delegated work. `availableToClaimStages` is only a count returned by the backend; the frontend does not infer claim eligibility or reveal details for unclaimed stages. Super Admin uses only the platform configuration and platform analytics endpoints.
@@ -296,4 +299,4 @@ Tests run with Vitest and happy-dom and do not require a live backend.
 
 ## Repository boundary
 
-The frontend is intended to be maintained in a repository separate from the backend. The backend was inspected read-only to align naming and API conventions; this initialization does not modify backend files.
+The frontend is intended to be maintained in a repository separate from the backend. The dashboard approval analytics contract is updated alongside the frontend to keep delegated decision counts separate from outcome totals.

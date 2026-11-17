@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
+import { AppIcon } from '@/components/common/AppIcon';
+import { IconButton } from '@/components/common/IconButton';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { Alert, Button, Card, Modal } from '@/components/ui';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthError, getAuthErrorMessage } from '@/features/auth/services/auth-errors';
-import { hasOrganizationPermission, hasPermission } from '@/features/authorization/permissions';
+import {
+  hasOrganizationPermission,
+  hasPermission,
+  isDepartmentMember,
+} from '@/features/authorization/permissions';
 import { useToast } from '@/components/ui/useToast';
 import {
   useSetUserMembershipStatus,
@@ -30,6 +36,10 @@ import { useDebounce } from '@/hooks/useDebounce';
 
 const pageSize = 10;
 
+function getUserSortOrder(sortBy: UserSortField): UserSortOrder {
+  return sortBy === 'name' || sortBy === 'email' || sortBy === 'accountStatus' ? 'asc' : 'desc';
+}
+
 export function UserListPage() {
   const { user, authorizationStatus } = useAuth();
   const { showToast } = useToast();
@@ -40,7 +50,7 @@ export function UserListPage() {
   const [departmentId, setDepartmentId] = useState('');
   const [roleId, setRoleId] = useState('');
   const [sortBy, setSortBy] = useState<UserSortField>('createdAt');
-  const [sortOrder, setSortOrder] = useState<UserSortOrder>('desc');
+  const sortOrder = getUserSortOrder(sortBy);
   const [page, setPage] = useState(1);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(() => new Set());
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -51,10 +61,11 @@ export function UserListPage() {
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const organizationId = user?.organizationId ?? '';
+  const departmentMember = user ? isDepartmentMember(user.authorization) : false;
 
   useEffect(() => {
     setSelectedUserIds(new Set());
-  }, [departmentId, organizationId, page, roleId, search, searchInput, sortBy, sortOrder, status]);
+  }, [departmentId, organizationId, page, roleId, search, searchInput, sortBy, status]);
 
   const params = useMemo<UserListParams>(
     () => ({
@@ -77,7 +88,7 @@ export function UserListPage() {
   const departmentQuery = useUserDepartmentOptions(
     actorId,
     canViewList ? organizationId : '',
-    canViewList,
+    canViewList && !departmentMember,
   );
   const canLoadRoles = Boolean(user && hasOrganizationPermission(user.authorization, 'roles.view'));
   const rolesQuery = useUserRoleCatalog(
@@ -108,7 +119,9 @@ export function UserListPage() {
     (targetUser) => targetUser.membership.status === 'INACTIVE',
   );
   const pagination = listQuery.data?.pagination;
-  const hasFilters = Boolean(searchInput.trim() || status || departmentId || roleId);
+  const hasFilters = Boolean(
+    searchInput.trim() || status || departmentId || roleId || sortBy !== 'createdAt',
+  );
 
   function clearFilters() {
     setSelectedUserIds(new Set());
@@ -117,7 +130,6 @@ export function UserListPage() {
     setDepartmentId('');
     setRoleId('');
     setSortBy('createdAt');
-    setSortOrder('desc');
     setPage(1);
   }
 
@@ -155,28 +167,35 @@ export function UserListPage() {
       <PageHeader
         eyebrow="Organization"
         title="Users"
-        description="Browse users who belong to this organization and are visible in your permission scope."
+        description={
+          departmentMember
+            ? 'View users in your department and organization-level roles.'
+            : 'Browse users who belong to this organization and are visible in your permission scope.'
+        }
         actions={
           <div className="user-page__header-actions">
-            <Button
+            <IconButton
               variant="outline"
+              icon="refresh"
+              label="Refresh users"
               onClick={() => {
                 void listQuery.refetch();
-                void departmentQuery.refetch();
+                if (!departmentMember) void departmentQuery.refetch();
                 if (canLoadRoles) void rolesQuery.refetch();
               }}
-              loading={listQuery.isFetching || departmentQuery.isFetching || rolesQuery.isFetching}
-              aria-label="Refresh users"
-            >
-              Refresh
-            </Button>
+              loading={
+                listQuery.isFetching ||
+                departmentQuery.isFetching ||
+                (canLoadRoles && rolesQuery.isFetching)
+              }
+            />
             {canCreate && (
               <>
                 <Button variant="outline" onClick={() => setIsBulkImportOpen(true)}>
                   Bulk import
                 </Button>
-                <Link className="ui-button ui-button--primary" to={APP_ROUTES.newUser}>
-                  Add user
+                <Link className="user-page__add-user" to={APP_ROUTES.newUser} aria-label="Add user">
+                  <AppIcon name="add" size={18} />
                 </Link>
               </>
             )}
@@ -186,11 +205,13 @@ export function UserListPage() {
 
       <Card
         title="User directory"
-        description={
-          pagination
-            ? `${pagination.total} ${pagination.total === 1 ? 'user' : 'users'} in your current organization scope. Search and filter by account status, department, role, or sort order.`
-            : 'Search and filter by account status, department, role, or sort order.'
-        }
+        {...(departmentMember
+          ? {}
+          : {
+              description: pagination
+                ? `${pagination.total} ${pagination.total === 1 ? 'user' : 'users'} in your current organization scope. Search, filter, and sort the authorized results.`
+                : 'Search, filter, and sort the authorized results.',
+            })}
         className="user-directory"
       >
         <UserFilters
@@ -199,20 +220,22 @@ export function UserListPage() {
           departmentId={departmentId}
           roleId={roleId}
           sortBy={sortBy}
-          sortOrder={sortOrder}
           departments={departmentQuery.data ?? []}
-          roles={rolesQuery.data ?? []}
-          departmentsLoading={departmentQuery.isPending && !departmentQuery.data}
+          roles={departmentMember ? (listQuery.data?.roleOptions ?? []) : (rolesQuery.data ?? [])}
+          departmentsLoading={
+            !departmentMember && departmentQuery.isPending && !departmentQuery.data
+          }
           rolesLoading={canLoadRoles && rolesQuery.isPending && !rolesQuery.data}
+          hideDepartmentFilter={departmentMember}
           departmentFilterError={
-            departmentQuery.isError
+            !departmentMember && departmentQuery.isError
               ? 'Department filtering is unavailable. Use Refresh to retry.'
               : null
           }
           roleFilterError={
-            !canLoadRoles
+            !departmentMember && !canLoadRoles
               ? 'Role filtering requires organization-level role access.'
-              : rolesQuery.isError
+              : !departmentMember && rolesQuery.isError
                 ? getAuthError(rolesQuery.error).status === 403
                   ? 'Role filtering is not available for this account.'
                   : 'Role filtering is unavailable. Use Refresh to retry.'
@@ -242,11 +265,6 @@ export function UserListPage() {
           onSortByChange={(value) => {
             setSelectedUserIds(new Set());
             setSortBy(value);
-            setPage(1);
-          }}
-          onSortOrderChange={(value) => {
-            setSelectedUserIds(new Set());
-            setSortOrder(value);
             setPage(1);
           }}
           onClear={clearFilters}
@@ -301,6 +319,7 @@ export function UserListPage() {
               isLoading={listQuery.isPending}
               hasFilters={hasFilters}
               canCreate={canCreate}
+              readOnlyDirectory={departmentMember}
               onClearFilters={clearFilters}
               {...(canBulkChangeMembership
                 ? {

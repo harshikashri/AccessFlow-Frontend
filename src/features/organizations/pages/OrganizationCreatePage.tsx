@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -55,11 +54,7 @@ function OrganizationCreateContent({ userId }: { userId: string }) {
         eyebrow="Organizations"
         title="Create organization"
         description="Set up an organization and its initial administrator."
-        actions={
-          <Button variant="outline" onClick={() => navigate(APP_ROUTES.organizations)}>
-            Back to organizations
-          </Button>
-        }
+        backLink={{ to: APP_ROUTES.organizations, label: 'Back to organizations' }}
       />
       <OrganizationForm
         mode="create"

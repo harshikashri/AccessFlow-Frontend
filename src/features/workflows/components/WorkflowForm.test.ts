@@ -139,10 +139,15 @@ describe('WorkflowForm', () => {
       }),
     );
 
+    expect(
+      screen.queryByText('Choose when this approval policy is eligible to handle a request.'),
+    ).toBeNull();
     await user.type(screen.getByLabelText(/Workflow name/), 'Department budget approvals');
     await user.selectOptions(screen.getByLabelText(/Request type/), requestType.id);
     await user.click(screen.getByRole('button', { name: 'Add stage' }));
+    expect(screen.getByText('Required')).toBeTruthy();
     await user.selectOptions(screen.getAllByLabelText('Approver')[1]!, 'ROLE');
+    expect(screen.getByText('Optional')).toBeTruthy();
     await user.selectOptions(screen.getByLabelText('Approval role'), role.id);
     expect((screen.getByLabelText('Approver eligibility') as HTMLSelectElement).value).toBe('');
     await user.selectOptions(screen.getByLabelText('Approver eligibility'), 'ORGANIZATION');

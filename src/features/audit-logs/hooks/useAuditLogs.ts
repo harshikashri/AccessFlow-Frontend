@@ -11,6 +11,15 @@ export const useAuditLogs = (params: AuditListParams, enabled: boolean) =>
     staleTime: 15_000,
   });
 
+export const usePlatformAuditLogs = (params: AuditListParams, enabled: boolean) =>
+  useQuery({
+    queryKey: auditLogQueryKeys.platformList(params),
+    queryFn: ({ signal }) => auditLogService.listPlatform(params, signal),
+    enabled,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
+
 export const useAuditLog = (id: string, enabled: boolean) =>
   useQuery({
     queryKey: auditLogQueryKeys.detail(id),

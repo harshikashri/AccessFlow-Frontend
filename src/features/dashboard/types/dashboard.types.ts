@@ -1,4 +1,13 @@
 export type DashboardType = 'DYNAMIC' | 'PLATFORM';
+export type PlatformDashboardSection =
+  'overview' | 'organization-analytics' | 'user-analytics' | 'platform-usage';
+export type OrganizationDashboardSection =
+  | 'request-summary'
+  | 'approval-summary'
+  | 'approval-activity'
+  | 'user-statistics'
+  | 'department-overview';
+export type DashboardSection = PlatformDashboardSection | OrganizationDashboardSection;
 
 export type DashboardScope =
   | 'PLATFORM'
@@ -229,6 +238,7 @@ export interface ApprovalAnalytics {
   };
   performance: {
     completedDecisions: number;
+    delegatedDecisions: number;
     averageDecisionMinutes: number | null;
     medianDecisionMinutes: number | null;
     slaDecisionSampleSize: number;

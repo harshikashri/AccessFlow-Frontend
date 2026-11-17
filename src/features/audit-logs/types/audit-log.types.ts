@@ -3,6 +3,7 @@ export interface AuditLog {
   organizationId: string | null;
   departmentId: string | null;
   actorId: string | null;
+  actorPlatformRole: 'SUPER_ADMIN' | null;
   actor: { id: string; name: string; email: string } | null;
   action: string;
   resourceType: string;
@@ -14,6 +15,7 @@ export interface AuditLog {
   result: string | null;
   status: string | null;
   timestamp: string;
+  description?: string;
 }
 
 export interface AuditListParams {
@@ -22,6 +24,7 @@ export interface AuditListParams {
   search?: string;
   actorId?: string;
   action?: string;
+  organizationId?: string;
   resourceType?: string;
   resourceId?: string;
   departmentId?: string;

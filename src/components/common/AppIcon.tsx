@@ -2,9 +2,21 @@ import type { ReactNode } from 'react';
 import type { NavigationIcon } from '@/features/authorization/navigation.config';
 
 export type AppIconName =
-  NavigationIcon | 'bell' | 'menu' | 'collapse' | 'expand' | 'refresh' | 'logout' | 'chevron';
+  | NavigationIcon
+  | 'add'
+  | 'bell'
+  | 'menu'
+  | 'collapse'
+  | 'expand'
+  | 'refresh'
+  | 'logout'
+  | 'chevron'
+  | 'edit'
+  | 'view'
+  | 'arrow-left';
 
 const paths: Record<AppIconName, ReactNode> = {
+  add: <path d="M12 5v14m-7-7h14" />,
   dashboard: (
     <>
       <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -119,6 +131,18 @@ const paths: Record<AppIconName, ReactNode> = {
     </>
   ),
   chevron: <path d="m9 18 6-6-6-6" />,
+  edit: (
+    <>
+      <path d="m15 5 4 4M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z" />
+    </>
+  ),
+  view: (
+    <>
+      <path d="M2.5 12s3.5-7 9.5-7 9.5 7 9.5 7-3.5 7-9.5 7-9.5-7-9.5-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  'arrow-left': <path d="m14 18-6-6 6-6M8 12h13" />,
 };
 
 export function AppIcon({ name, size = 20 }: { name: AppIconName; size?: number }) {

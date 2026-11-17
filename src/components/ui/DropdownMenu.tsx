@@ -10,12 +10,21 @@ export interface DropdownMenuItem {
 
 export interface DropdownMenuProps {
   label: string;
+  triggerLabel?: string;
   trigger: ReactNode;
   items: DropdownMenuItem[];
   align?: 'start' | 'end';
+  showChevron?: boolean;
 }
 
-export function DropdownMenu({ label, trigger, items, align = 'start' }: DropdownMenuProps) {
+export function DropdownMenu({
+  label,
+  triggerLabel,
+  trigger,
+  items,
+  align = 'start',
+  showChevron = true,
+}: DropdownMenuProps) {
   const menuId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -66,12 +75,15 @@ export function DropdownMenu({ label, trigger, items, align = 'start' }: Dropdow
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
+        {...(triggerLabel ? { 'aria-label': triggerLabel } : {})}
         onClick={() => setOpen((current) => !current)}
       >
         {trigger}
-        <span className="ui-dropdown__chevron" aria-hidden="true">
-          ▾
-        </span>
+        {showChevron && (
+          <span className="ui-dropdown__chevron" aria-hidden="true">
+            ▾
+          </span>
+        )}
       </button>
       {open && (
         <div

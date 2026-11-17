@@ -155,17 +155,24 @@ function ApprovalSummaryView({ data }: { data: ApprovalAnalytics }) {
 
 function ApprovalActivityView({ data }: { data: ApprovalAnalytics }) {
   return (
-    <div className="dashboard-chart-grid">
-      <DashboardChart
-        title="Recorded approval decisions"
-        points={data.decisions.map((row) => ({ label: row.decision, value: row.count }))}
-        type="donut"
+    <>
+      <MetricList
+        items={[
+          { label: 'Decisions made as delegate', value: data.performance.delegatedDecisions },
+        ]}
       />
-      <DashboardChart
-        title="Approval stages by total steps"
-        points={data.stages.map((row) => ({ label: row.stageName, value: row.totalSteps }))}
-      />
-    </div>
+      <div className="dashboard-chart-grid">
+        <DashboardChart
+          title="Recorded approval decisions"
+          points={data.decisions.map((row) => ({ label: row.decision, value: row.count }))}
+          type="donut"
+        />
+        <DashboardChart
+          title="Approval stages by total steps"
+          points={data.stages.map((row) => ({ label: row.stageName, value: row.totalSteps }))}
+        />
+      </div>
+    </>
   );
 }
 

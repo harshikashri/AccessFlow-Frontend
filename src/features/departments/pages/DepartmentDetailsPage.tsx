@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { AppIcon } from '@/components/common/AppIcon';
+import { BackLink } from '@/components/common/BackLink';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Alert, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -65,6 +67,7 @@ function DepartmentDetailsContent({
   if (!detailsQuery.data) {
     return (
       <div className="workspace-page department-page">
+        <BackLink to={APP_ROUTES.departments} label="Back to departments" />
         <ErrorState
           title="Department details unavailable"
           description={getAuthErrorMessage(
@@ -75,9 +78,6 @@ function DepartmentDetailsContent({
             <div className="department-error-actions">
               <Button variant="outline" onClick={() => void detailsQuery.refetch()}>
                 Retry
-              </Button>
-              <Button variant="ghost" onClick={() => navigate(APP_ROUTES.departments)}>
-                Back to departments
               </Button>
             </div>
           }
@@ -140,14 +140,13 @@ function DepartmentDetailsContent({
         eyebrow="Department details"
         title={department.name}
         description="Department profile and authorized membership overview."
+        backLink={{ to: APP_ROUTES.departments, label: 'Back to departments' }}
         actions={
           <div className="department-page__header-actions">
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.departments)}>
-              Back
-            </Button>
             {canEdit && department.status === 'ACTIVE' && (
               <Button
                 variant="outline"
+                leadingIcon={<AppIcon name="edit" size={16} />}
                 onClick={() => navigate(`${APP_ROUTES.departments}/${department.id}/edit`)}
               >
                 Edit department
@@ -180,10 +179,6 @@ function DepartmentDetailsContent({
         />
       </div>
       <DepartmentMembers members={members} actor={actor} />
-      <Alert variant="information" title="Activity history">
-        Department audit events are recorded by the backend, but there is no department activity
-        read endpoint available to this workspace.
-      </Alert>
       <DepartmentStatusDialog
         department={department}
         nextStatus={nextStatus}
@@ -241,7 +236,6 @@ function DepartmentDetailsContent({
 export function DepartmentDetailsPage() {
   const { user, authorizationStatus } = useAuth();
   const { departmentId = '' } = useParams();
-  const navigate = useNavigate();
   const organizationId = user?.organizationId ?? '';
 
   if (authorizationStatus === 'loading') {
@@ -255,14 +249,10 @@ export function DepartmentDetailsPage() {
   if (!isDepartmentId(departmentId)) {
     return (
       <div className="workspace-page department-page">
+        <BackLink to={APP_ROUTES.departments} label="Back to departments" />
         <ErrorState
           title="Invalid department link"
           description="The department ID in this address is not valid."
-          action={
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.departments)}>
-              Back to departments
-            </Button>
-          }
         />
       </div>
     );

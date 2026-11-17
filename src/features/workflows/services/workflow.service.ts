@@ -83,6 +83,7 @@ function isWorkflow(value: unknown): value is Workflow {
     typeof value.name === 'string' &&
     typeof value.description === 'string' &&
     (value.requestTypeId === null || typeof value.requestTypeId === 'string') &&
+    (value.workflowScope === 'DEPARTMENT' || value.workflowScope === 'ORGANIZATION') &&
     (value.selectionCondition === null || isWorkflowCondition(value.selectionCondition)) &&
     typeof value.priority === 'number' &&
     typeof value.version === 'number' &&

@@ -141,6 +141,10 @@ describe('OrganizationListPage', () => {
     expect(screen.getByRole('link', { name: 'Acme Corporation' }).getAttribute('href')).toBe(
       `/organizations/${organization.id}`,
     );
+    expect(screen.getByRole('link', { name: 'Edit Acme Corporation' }).getAttribute('href')).toBe(
+      `/organizations/${organization.id}/edit`,
+    );
+    expect(screen.queryByText(/ID:/)).toBeNull();
 
     await user.type(screen.getByLabelText('Search organizations'), 'Acme');
     await waitFor(() =>

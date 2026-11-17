@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { IconLink } from '@/components/common/IconLink';
 import {
   Button,
   Table,
@@ -60,17 +61,9 @@ export function OrganizationTable({
           items.map((organization) => (
             <TableRow key={organization.id}>
               <TableCell>
-                <div className="organization-table__identity">
-                  <Link
-                    className="organization-table__name"
-                    to={`/organizations/${organization.id}`}
-                  >
-                    {organization.name}
-                  </Link>
-                  <span className="organization-table__id" title={organization.id}>
-                    ID: {organization.id}
-                  </span>
-                </div>
+                <Link className="organization-table__name" to={`/organizations/${organization.id}`}>
+                  {organization.name}
+                </Link>
               </TableCell>
               <TableCell>
                 <OrganizationStatusBadge status={organization.status} />
@@ -78,9 +71,20 @@ export function OrganizationTable({
               <TableCell>{formatOrganizationDate(organization.createdAt)}</TableCell>
               <TableCell>{formatOrganizationDate(organization.updatedAt)}</TableCell>
               <TableCell>
-                <Link className="organization-table__view" to={`/organizations/${organization.id}`}>
-                  View
-                </Link>
+                <div className="organization-table__actions">
+                  <IconLink
+                    icon="view"
+                    className="organization-table__view"
+                    label={`View ${organization.name}`}
+                    to={`/organizations/${organization.id}`}
+                  />
+                  <IconLink
+                    icon="edit"
+                    className="organization-table__view"
+                    label={`Edit ${organization.name}`}
+                    to={`/organizations/${organization.id}/edit`}
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ))

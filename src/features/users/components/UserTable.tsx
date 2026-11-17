@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { IconLink } from '@/components/common/IconLink';
 import {
   Button,
   Checkbox,
@@ -27,6 +28,7 @@ interface UserTableProps {
   isLoading: boolean;
   hasFilters: boolean;
   canCreate: boolean;
+  readOnlyDirectory?: boolean;
   onClearFilters: () => void;
   onSetMembershipStatus: (user: UserProfile, status: 'ACTIVE' | 'INACTIVE') => void;
   selection?: {
@@ -43,6 +45,7 @@ export function UserTable({
   isLoading,
   hasFilters,
   canCreate,
+  readOnlyDirectory = false,
   onClearFilters,
   onSetMembershipStatus,
   selection,
@@ -61,7 +64,8 @@ export function UserTable({
           {selection && (
             <TableHeader scope="col">
               <Checkbox
-                label="Select all users on this page"
+                label="All users on this page"
+                visuallyHiddenLabel
                 checked={allSelectableSelected}
                 indeterminate={selectedCount > 0 && !allSelectableSelected}
                 disabled={selectableUsers.length === 0 || isLoading}
@@ -79,14 +83,19 @@ export function UserTable({
           <TableHeader scope="col">Organization membership</TableHeader>
           <TableHeader scope="col">Department</TableHeader>
           <TableHeader scope="col">Roles</TableHeader>
-          <TableHeader scope="col">Actions</TableHeader>
+          {!readOnlyDirectory && <TableHeader scope="col">Actions</TableHeader>}
         </TableRow>
       </TableHead>
       <TableBody>
         {isLoading ? (
-          <TableLoadingState columns={selection ? 7 : 6} rows={5} />
+          <TableLoadingState
+            columns={selection ? (readOnlyDirectory ? 6 : 7) : readOnlyDirectory ? 5 : 6}
+            rows={5}
+          />
         ) : users.length === 0 ? (
-          <TableEmptyState colSpan={selection ? 7 : 6}>
+          <TableEmptyState
+            colSpan={selection ? (readOnlyDirectory ? 6 : 7) : readOnlyDirectory ? 5 : 6}
+          >
             <div className="user-table__empty">
               <span>
                 {hasFilters
@@ -113,7 +122,8 @@ export function UserTable({
                   <TableCell>
                     {selection.canSelectUser(user) ? (
                       <Checkbox
-                        label={`Select ${user.name}`}
+                        label={user.name}
+                        visuallyHiddenLabel
                         checked={selection.selectedIds.has(user.id)}
                         onChange={(event) => selection.onToggle(user.id, event.target.checked)}
                       />
@@ -124,7 +134,7 @@ export function UserTable({
                 )}
                 <TableCell>
                   <div className="user-table__identity">
-                    {canView ? (
+                    {canView && !readOnlyDirectory ? (
                       <Link className="user-table__name" to={`${APP_ROUTES.users}/${user.id}`}>
                         {user.name}
                       </Link>
@@ -152,48 +162,50 @@ export function UserTable({
                     .map((assignment) => assignment.roleName ?? 'Role')
                     .join(', ') || '—'}
                 </TableCell>
-                <TableCell>
-                  <div className="user-table__actions">
-                    {canView && (
-                      <Link
-                        className="user-table__action-link"
-                        to={`${APP_ROUTES.users}/${user.id}`}
-                      >
-                        View
-                      </Link>
-                    )}
-                    {canEdit && (
-                      <Link
-                        className="user-table__action-link"
-                        to={`${APP_ROUTES.users}/${user.id}/edit`}
-                      >
-                        Edit
-                      </Link>
-                    )}
-                    {canManageMembership &&
-                      user.id !== actor.id &&
-                      user.membership.status === 'ACTIVE' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onSetMembershipStatus(user, 'INACTIVE')}
-                        >
-                          Deactivate membership
-                        </Button>
+                {!readOnlyDirectory && (
+                  <TableCell>
+                    <div className="user-table__actions">
+                      {canView && (
+                        <IconLink
+                          icon="view"
+                          className="user-table__action-link"
+                          label={`View ${user.name}`}
+                          to={`${APP_ROUTES.users}/${user.id}`}
+                        />
                       )}
-                    {canManageMembership &&
-                      user.id !== actor.id &&
-                      user.membership.status === 'INACTIVE' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onSetMembershipStatus(user, 'ACTIVE')}
-                        >
-                          Reactivate membership
-                        </Button>
+                      {canEdit && (
+                        <IconLink
+                          icon="edit"
+                          className="user-table__action-link"
+                          label={`Edit ${user.name}`}
+                          to={`${APP_ROUTES.users}/${user.id}/edit`}
+                        />
                       )}
-                  </div>
-                </TableCell>
+                      {canManageMembership &&
+                        user.id !== actor.id &&
+                        user.membership.status === 'ACTIVE' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onSetMembershipStatus(user, 'INACTIVE')}
+                          >
+                            Deactivate membership
+                          </Button>
+                        )}
+                      {canManageMembership &&
+                        user.id !== actor.id &&
+                        user.membership.status === 'INACTIVE' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onSetMembershipStatus(user, 'ACTIVE')}
+                          >
+                            Reactivate membership
+                          </Button>
+                        )}
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             );
           })

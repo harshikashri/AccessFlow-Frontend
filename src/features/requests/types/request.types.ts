@@ -66,7 +66,7 @@ export interface RequestSummary {
   organizationId: string;
   requestNumber: string;
   requesterId: string;
-  departmentId: string;
+  departmentId: string | null;
   requestTypeId: string | null;
   requestType: string;
   requestTypeCode: string | null;
@@ -144,6 +144,20 @@ export interface ApprovalProgress {
   request: RequestSummary;
   attemptNumber: number;
   currentStage: { sequence: number; stageId: string; stageName: string; status: string } | null;
+  stages?: {
+    sequence: number;
+    stageId: string;
+    stageName: string;
+    description: string;
+    status: string;
+    approverType: string;
+    approverRoleName: string | null;
+    approverNames: string[];
+    approvalMode: string;
+    scopeType: string | null;
+    slaDueAt: string | null;
+    comments: string[];
+  }[];
   totalApplicableStages: number;
   completedStages: number[];
   pendingStages: number[];

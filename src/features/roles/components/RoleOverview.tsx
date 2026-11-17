@@ -29,26 +29,21 @@ export function RoleOverview({ role }: { role: ManagedRole }) {
         <div>
           <dt>Supported assignment scopes</dt>
           <dd>
-            {supportedScopes.length
-              ? supportedScopes.map((scope) => (
-                  <Badge key={scope} variant="information">
-                    {scope === 'ORGANIZATION' ? 'Organization' : 'Department'}
-                  </Badge>
-                ))
-              : <Badge variant="warning">Unconfigured</Badge>}
+            {supportedScopes.length ? (
+              supportedScopes.map((scope) => (
+                <Badge key={scope} variant="information">
+                  {scope === 'ORGANIZATION' ? 'Organization' : 'Department'}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="warning">Unconfigured</Badge>
+            )}
           </dd>
         </div>
         <div>
           <dt>Status</dt>
           <dd>
             <RoleStatusBadge status={role.status} />
-          </dd>
-        </div>
-        <div>
-          <dt>Organization</dt>
-          <dd>
-            <span>Current organization</span>
-            <code>{role.organizationId}</code>
           </dd>
         </div>
         <div>
@@ -70,14 +65,10 @@ export function RoleOverview({ role }: { role: ManagedRole }) {
           <dd>{formatDate(role.updatedAt)}</dd>
         </div>
       </dl>
-      <p className="role-overview__scope-note">
-        Permissions listed for this role are not a user&apos;s complete effective access. Effective
-        access also depends on each active assignment and its organization or department scope.
-      </p>
       {role.roleType === 'CUSTOM' && supportedScopes.length === 0 && (
         <p className="role-overview__scope-note">
-          This legacy custom role must be edited to choose supported assignment scopes before it can be
-          assigned to users.
+          This legacy custom role must be edited to choose supported assignment scopes before it can
+          be assigned to users.
         </p>
       )}
     </Card>

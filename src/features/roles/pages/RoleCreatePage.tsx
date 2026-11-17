@@ -26,7 +26,10 @@ export function RoleCreatePage() {
   const { user, authorizationStatus } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const [permissions, setPermissions] = useState<PermissionId[]>([]);
+  const [permissions, setPermissions] = useState<PermissionId[]>(() => [
+    'requests.create',
+    'dashboard.view',
+  ]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const organizationId = user?.organizationId ?? '';
   const canCreate = Boolean(user && hasOrganizationPermission(user.authorization, 'roles.create'));
@@ -116,7 +119,8 @@ export function RoleCreatePage() {
                 <div>
                   <h2 id="role-permissions-heading">Initial permissions</h2>
                   <p>
-                    A user&apos;s effective access also depends on assignment scope and other active
+                    Request creation and dashboard access are enabled by default. Adjust them here
+                    as needed; effective access also depends on assignment scope and other active
                     roles.
                   </p>
                 </div>

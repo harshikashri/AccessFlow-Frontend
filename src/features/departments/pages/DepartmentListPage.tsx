@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { PageHeader } from '@/components/common/PageHeader';
+import { IconButton } from '@/components/common/IconButton';
 import { Alert, Button, Card, Input, Select } from '@/components/ui';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -27,7 +28,8 @@ export function DepartmentListPage() {
   const search = searchInput.trim() ? debouncedSearch : '';
   const [status, setStatus] = useState<DepartmentStatus | ''>('');
   const [sortBy, setSortBy] = useState<DepartmentSortField>('createdAt');
-  const [sortOrder, setSortOrder] = useState<DepartmentSortOrder>('desc');
+  const sortOrder: DepartmentSortOrder =
+    sortBy === 'name' || sortBy === 'description' || sortBy === 'status' ? 'asc' : 'desc';
   const [page, setPage] = useState(1);
 
   const params = useMemo<DepartmentListParams>(
@@ -63,13 +65,12 @@ export function DepartmentListPage() {
 
   const canCreate = hasOrganizationPermission(user.authorization, 'departments.create');
   const pagination = listQuery.data?.pagination;
-  const hasFilters = Boolean(searchInput.trim() || status);
+  const hasFilters = Boolean(searchInput.trim() || status || sortBy !== 'createdAt');
 
   function clearFilters() {
     setSearchInput('');
     setStatus('');
     setSortBy('createdAt');
-    setSortOrder('desc');
     setPage(1);
   }
 
@@ -83,17 +84,15 @@ export function DepartmentListPage() {
       <PageHeader
         eyebrow="Organization"
         title="Departments"
-        description="Browse departments available within your active organization and permission scope."
         actions={
           <div className="department-page__header-actions">
-            <Button
+            <IconButton
               variant="outline"
+              icon="refresh"
+              label="Refresh departments"
               onClick={() => void listQuery.refetch()}
               loading={listQuery.isFetching}
-              aria-label="Refresh departments"
-            >
-              Refresh
-            </Button>
+            />
             {canCreate && (
               <Button onClick={() => navigate(`${APP_ROUTES.departments}/new`)}>
                 Create department
@@ -103,11 +102,7 @@ export function DepartmentListPage() {
         }
       />
 
-      <Card
-        title="Department directory"
-        description="Search department names, filter by status, and sort the authorized results."
-        className="department-directory"
-      >
+      <Card title="Department directory" className="department-directory">
         <div className="department-filters">
           <Input
             label="Search departments"
@@ -148,19 +143,6 @@ export function DepartmentListPage() {
               { value: 'name', label: 'Name' },
               { value: 'description', label: 'Description' },
               { value: 'status', label: 'Status' },
-            ]}
-          />
-          <Select
-            label="Sort order"
-            name="sortOrder"
-            value={sortOrder}
-            onChange={(event) => {
-              setSortOrder(event.target.value as DepartmentSortOrder);
-              setPage(1);
-            }}
-            options={[
-              { value: 'desc', label: 'Descending' },
-              { value: 'asc', label: 'Ascending' },
             ]}
           />
           {hasFilters && (

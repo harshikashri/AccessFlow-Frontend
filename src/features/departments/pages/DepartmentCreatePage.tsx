@@ -73,11 +73,7 @@ export function DepartmentCreatePage() {
         eyebrow="Departments"
         title="Create department"
         description="Add a department to your active organization."
-        actions={
-          <Button variant="outline" onClick={() => navigate(APP_ROUTES.departments)}>
-            Back to departments
-          </Button>
-        }
+        backLink={{ to: APP_ROUTES.departments, label: 'Back to departments' }}
       />
       {createdDepartment ? (
         <Alert variant="success" title="Department created">

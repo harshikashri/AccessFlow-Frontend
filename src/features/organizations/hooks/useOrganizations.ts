@@ -3,6 +3,7 @@ import { dashboardQueryKeys } from '@/features/dashboard/hooks/dashboard-query-k
 import { organizationService } from '@/features/organizations/services/organization.service';
 import type {
   CreateOrganizationRequest,
+  Organization,
   OrganizationListParams,
   OrganizationStatus,
   UpdateOrganizationRequest,
@@ -30,6 +31,32 @@ export function useOrganizationList(userId: string, params: OrganizationListPara
     queryKey: organizationQueryKeys.list(userId, params),
     queryFn: ({ signal }) => organizationService.list(params, signal),
     enabled: userId.length > 0,
+  });
+}
+
+export function useOrganizationOptions(userId: string) {
+  return useQuery({
+    queryKey: [...organizationQueryKeys.user(userId), 'filter-options'],
+    queryFn: async ({ signal }): Promise<Organization[]> => {
+      const params: OrganizationListParams = {
+        page: 1,
+        limit: 100,
+        search: '',
+        sortBy: 'name',
+        sortOrder: 'asc',
+      };
+      const firstPage = await organizationService.list(params, signal);
+      const organizations = [...firstPage.items];
+
+      for (let page = 2; page <= firstPage.pagination.totalPages; page += 1) {
+        const nextPage = await organizationService.list({ ...params, page }, signal);
+        organizations.push(...nextPage.items);
+      }
+
+      return organizations;
+    },
+    enabled: userId.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

@@ -11,6 +11,7 @@ import type {
   WorkflowSla,
   WorkflowSlaUnit,
   WorkflowStage,
+  WorkflowScope,
 } from '../types/workflow.types';
 import {
   formatWorkflowCondition,
@@ -48,7 +49,6 @@ function isValidSla(value: unknown): value is WorkflowSla {
     SLA_UNITS.some((unit) => unit.value === sla.unit)
   );
 }
-
 const managerStage = (): WorkflowStage => ({
   stageId: `department-manager-${Date.now()}`,
   sequence: 1,
@@ -106,6 +106,9 @@ function validate(
     errors.selectionCondition =
       'The organization default workflow cannot have a selection condition.';
   }
+  if (values.isDefault && values.workflowScope !== 'DEPARTMENT') {
+    errors.requestTypeId = 'The organization default workflow must be department-scoped.';
+  }
   if (
     !values.isDefault &&
     (!Number.isInteger(values.priority) || values.priority < 0 || values.priority > 1000)
@@ -121,13 +124,18 @@ function validate(
       'Complete every workflow condition using a field from the selected request type.';
   }
   const managerStages = values.stages.filter(
-    (stage) => stage.approverType === 'DEPARTMENT_MANAGER' && stage.isMandatory,
+    (stage) => stage.approverType === 'DEPARTMENT_MANAGER',
   );
   if (!values.stages.length) errors.stages = 'Add at least one approval stage.';
-  else if (managerStages.length !== 1) {
+  else if (
+    values.workflowScope === 'DEPARTMENT' &&
+    (managerStages.length !== 1 || !managerStages[0]?.isMandatory)
+  ) {
     errors.stages = 'Exactly one mandatory Department Manager stage is required.';
-  } else if (managerStages[0]?.sequence !== 1) {
+  } else if (values.workflowScope === 'DEPARTMENT' && managerStages[0]?.sequence !== 1) {
     errors.stages = 'Department Manager approval must be the first stage.';
+  } else if (values.workflowScope === 'ORGANIZATION' && managerStages.length) {
+    errors.stages = 'Organization-level workflows cannot include Department Manager stages.';
   }
   for (const stage of values.stages) {
     if (stage.approverType !== 'ROLE') continue;
@@ -141,9 +149,14 @@ function validate(
       errors.stages = `${role.name} has no configured assignment scope. Configure its supported scopes first.`;
       break;
     }
+    if (values.workflowScope === 'ORGANIZATION' && !supportedScopes.includes('ORGANIZATION')) {
+      errors.stages = `${role.name} does not support organization-wide assignments.`;
+      break;
+    }
     if (
       !stage.assignment.scopeType ||
-      !supportedScopes.includes(stage.assignment.scopeType as 'ORGANIZATION' | 'DEPARTMENT')
+      !supportedScopes.includes(stage.assignment.scopeType as 'ORGANIZATION' | 'DEPARTMENT') ||
+      (values.workflowScope === 'ORGANIZATION' && stage.assignment.scopeType !== 'ORGANIZATION')
     ) {
       errors.stages = `Choose an exact scope supported by ${role.name} for every role-based approval stage.`;
       break;
@@ -190,6 +203,7 @@ export function WorkflowForm({
     initialValues
       ? {
           ...initialValues,
+          workflowScope: initialValues.workflowScope ?? 'DEPARTMENT',
           isDefault: initialValues.isDefault ?? false,
           selectionCondition: initialValues.selectionCondition ?? null,
           priority: initialValues.priority ?? 0,
@@ -197,13 +211,19 @@ export function WorkflowForm({
             const assignment = { ...stage.assignment };
             if (stage.approverType === 'ROLE') {
               const role = roles.find((item) => item.id === stage.assignment.roleId);
-              const scopes = role ? getRoleSupportedScopes(role) : [];
+              const scopes = role
+                ? getRoleSupportedScopes(role).filter(
+                    (scope) =>
+                      initialValues.workflowScope !== 'ORGANIZATION' || scope === 'ORGANIZATION',
+                  )
+                : [];
               const existingScope = stage.assignment.scopeType;
-              const scopeType = scopes.length === 1
-                ? (scopes[0] ?? null)
-                : scopes.includes(existingScope as 'ORGANIZATION' | 'DEPARTMENT')
-                  ? existingScope ?? null
-                  : null;
+              const scopeType =
+                scopes.length === 1
+                  ? (scopes[0] ?? null)
+                  : scopes.includes(existingScope as 'ORGANIZATION' | 'DEPARTMENT')
+                    ? (existingScope ?? null)
+                    : null;
               if (scopeType) assignment.scopeType = scopeType;
               else delete assignment.scopeType;
             }
@@ -218,6 +238,7 @@ export function WorkflowForm({
           name: '',
           description: '',
           requestTypeId: '',
+          workflowScope: 'DEPARTMENT',
           isDefault: false,
           selectionCondition: null,
           priority: 0,
@@ -257,19 +278,57 @@ export function WorkflowForm({
     );
   }
 
+  function updateWorkflowScope(workflowScope: WorkflowScope) {
+    setValues((current) => {
+      let stages = current.stages.filter(
+        (stage) => workflowScope !== 'ORGANIZATION' || stage.approverType !== 'DEPARTMENT_MANAGER',
+      );
+      if (
+        workflowScope === 'DEPARTMENT' &&
+        !stages.some((stage) => stage.approverType === 'DEPARTMENT_MANAGER')
+      ) {
+        stages = [managerStage(), ...stages];
+      }
+      if (workflowScope === 'ORGANIZATION') {
+        stages = stages.map((stage) => {
+          if (stage.approverType !== 'ROLE') return stage;
+          const role = roles.find((item) => item.id === stage.assignment.roleId);
+          if (!role || !getRoleSupportedScopes(role).includes('ORGANIZATION')) return stage;
+          return {
+            ...stage,
+            assignment: { ...stage.assignment, scopeType: 'ORGANIZATION' },
+          };
+        });
+      }
+      stages = stages.map((stage, index) => ({ ...stage, sequence: index + 1 }));
+      if (!stages.length) stages = [createRoleStage(1)];
+      return { ...current, workflowScope, stages };
+    });
+    clearError('stages');
+  }
+
   function selectionFields() {
     return requestTypes.find((type) => type.id === values.requestTypeId)?.fields ?? [];
   }
 
   function moveStage(index: number, offset: -1 | 1) {
     const target = index + offset;
-    if (index === 0 || target <= 0 || target >= values.stages.length) return;
+    const departmentWorkflow = values.workflowScope === 'DEPARTMENT';
+    if (
+      (departmentWorkflow && (index === 0 || target <= 0)) ||
+      target < 0 ||
+      target >= values.stages.length
+    )
+      return;
     setValues((current) => {
       const stages = [...current.stages];
       const [moved] = stages.splice(index, 1);
       if (!moved) return current;
       stages.splice(target, 0, moved);
-      return { ...current, stages };
+      return {
+        ...current,
+        stages: stages.map((stage, stageIndex) => ({ ...stage, sequence: stageIndex + 1 })),
+      };
     });
     clearError('stages');
   }
@@ -283,6 +342,7 @@ export function WorkflowForm({
       name: values.name.trim(),
       description: values.description.trim(),
       requestTypeId: values.isDefault ? null : values.requestTypeId || null,
+      workflowScope: values.isDefault ? 'DEPARTMENT' : values.workflowScope,
       isDefault: values.isDefault,
       selectionCondition: values.isDefault ? null : values.selectionCondition,
       priority: values.isDefault ? 0 : values.priority,
@@ -297,11 +357,8 @@ export function WorkflowForm({
           {error}
         </Alert>
       )}
-      <Card
-        title="Workflow identity"
-        description="Choose when this approval policy is eligible to handle a request."
-      >
-        <div className="workflow-form__grid">
+      <Card title="Workflow setup">
+        <div className="workflow-form__grid workflow-form__grid--identity">
           <Input
             label="Workflow name"
             value={values.name}
@@ -315,17 +372,26 @@ export function WorkflowForm({
           />
           {allowWorkflowTypeSelection && (
             <Select
-              label="Workflow scope"
+              label="Workflow target"
               value={values.isDefault ? 'DEFAULT' : 'REQUEST_TYPE'}
               onChange={(event) => {
                 const isDefault = event.target.value === 'DEFAULT';
                 setValues((current) => ({
                   ...current,
                   isDefault,
+                  workflowScope: isDefault ? 'DEPARTMENT' : current.workflowScope,
                   requestTypeId: '',
                   selectionCondition: null,
                   priority: 0,
-                  stages: current.stages.map((stage) => ({ ...stage, condition: null })),
+                  stages:
+                    isDefault &&
+                    !current.stages.some((stage) => stage.approverType === 'DEPARTMENT_MANAGER')
+                      ? [managerStage(), ...current.stages].map((stage, index) => ({
+                          ...stage,
+                          sequence: index + 1,
+                          condition: null,
+                        }))
+                      : current.stages.map((stage) => ({ ...stage, condition: null })),
                 }));
                 setErrors({});
               }}
@@ -333,6 +399,19 @@ export function WorkflowForm({
                 { value: 'REQUEST_TYPE', label: 'For a specific request type' },
                 { value: 'DEFAULT', label: 'Organization default fallback' },
               ]}
+              disabled={isSubmitting}
+            />
+          )}
+          {!values.isDefault && (
+            <Select
+              label="Request routing scope"
+              value={values.workflowScope}
+              onChange={(event) => updateWorkflowScope(event.target.value as WorkflowScope)}
+              options={[
+                { value: 'DEPARTMENT', label: 'Department-level requests' },
+                { value: 'ORGANIZATION', label: 'Organization-level requests' },
+              ]}
+              helperText="Requests without a department use organization-level workflows."
               disabled={isSubmitting}
             />
           )}
@@ -407,7 +486,11 @@ export function WorkflowForm({
 
       <Card
         title="Approval sequence"
-        description="The first mandatory Department Manager stage is required by the approval engine. Add optional role stages after it."
+        description={
+          values.workflowScope === 'DEPARTMENT'
+            ? 'Build the approval path in order. Department-level requests start with a required Department Manager review.'
+            : 'Build the approval path for requests that do not belong to a department. Role approvers must be organization-scoped.'
+        }
         action={
           <Button
             type="button"
@@ -435,48 +518,70 @@ export function WorkflowForm({
             <li key={stage.stageId} className="workflow-editor__stage">
               <div className="workflow-editor__stage-header">
                 <span className="workflow-stage-list__number">{index + 1}</span>
-                <div>
+                <div className="workflow-editor__stage-copy">
                   <h3>Stage {index + 1}</h3>
-                  <p>Configure who can approve and when this stage applies.</p>
+                  <p>
+                    {stage.approverType === 'DEPARTMENT_MANAGER'
+                      ? 'Required first review'
+                      : stage.approverType === 'ROLE'
+                        ? 'Approval by a selected role'
+                        : 'Approval by an organization administrator'}
+                  </p>
                 </div>
-                {index > 0 && (
-                  <div className="workflow-editor__stage-actions">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => moveStage(index, -1)}
-                      disabled={isSubmitting || index === 1}
-                    >
-                      Move up
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => moveStage(index, 1)}
-                      disabled={isSubmitting || index === values.stages.length - 1}
-                    >
-                      Move down
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        setValues((current) => ({
-                          ...current,
-                          stages: current.stages.filter((_, itemIndex) => itemIndex !== index),
-                        }))
-                      }
-                      disabled={isSubmitting}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                )}
+                <div className="workflow-editor__stage-controls">
+                  <span
+                    className={`workflow-editor__stage-badge ${
+                      stage.isMandatory
+                        ? 'workflow-editor__stage-badge--required'
+                        : 'workflow-editor__stage-badge--conditional'
+                    }`}
+                  >
+                    {stage.isMandatory ? 'Required' : 'Optional'}
+                  </span>
+                  {(index > 0 || values.workflowScope === 'ORGANIZATION') && (
+                    <div className="workflow-editor__stage-actions">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => moveStage(index, -1)}
+                        disabled={
+                          isSubmitting ||
+                          (values.workflowScope === 'DEPARTMENT' ? index === 1 : index === 0)
+                        }
+                      >
+                        Move up
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => moveStage(index, 1)}
+                        disabled={isSubmitting || index === values.stages.length - 1}
+                      >
+                        Move down
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          setValues((current) => ({
+                            ...current,
+                            stages: current.stages.filter((_, itemIndex) => itemIndex !== index),
+                          }))
+                        }
+                        disabled={
+                          isSubmitting || (values.workflowScope === 'DEPARTMENT' && index === 0)
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="workflow-form__grid">
+              <div className="workflow-form__grid workflow-form__grid--stage">
                 <Input
                   label="Stage name"
                   value={stage.name}
@@ -503,12 +608,17 @@ export function WorkflowForm({
                       assignment,
                     });
                   }}
-                  options={[
-                    { value: 'DEPARTMENT_MANAGER', label: 'Department Manager' },
-                    { value: 'ROLE', label: 'Role' },
-                    { value: 'ORGANIZATION_ADMIN', label: 'Organization Admin' },
-                  ]}
-                  disabled={isSubmitting || index === 0}
+                  options={
+                    [
+                      ...(values.workflowScope === 'DEPARTMENT' &&
+                      (index === 0 || stage.approverType === 'DEPARTMENT_MANAGER')
+                        ? [{ value: 'DEPARTMENT_MANAGER', label: 'Department Manager' }]
+                        : []),
+                      { value: 'ROLE', label: 'Role' },
+                      { value: 'ORGANIZATION_ADMIN', label: 'Organization Admin' },
+                    ] as { value: WorkflowApproverType; label: string }[]
+                  }
+                  disabled={isSubmitting || (values.workflowScope === 'DEPARTMENT' && index === 0)}
                 />
                 {stage.approverType === 'ROLE' && (
                   <Select
@@ -519,12 +629,18 @@ export function WorkflowForm({
                       const role = roles.find((item) => item.id === roleId);
                       const scopes = role ? getRoleSupportedScopes(role) : [];
                       const currentScope = stage.assignment.scopeType;
-                      const scopeType = scopes.length === 1
-                        ? scopes[0]
-                        : scopes.includes(currentScope as 'ORGANIZATION' | 'DEPARTMENT')
-                          ? currentScope
-                          : undefined;
-                      const assignment: WorkflowStage['assignment'] = { ...stage.assignment, roleId };
+                      const scopeType =
+                        values.workflowScope === 'ORGANIZATION' && scopes.includes('ORGANIZATION')
+                          ? 'ORGANIZATION'
+                          : scopes.length === 1
+                            ? scopes[0]
+                            : scopes.includes(currentScope as 'ORGANIZATION' | 'DEPARTMENT')
+                              ? currentScope
+                              : undefined;
+                      const assignment: WorkflowStage['assignment'] = {
+                        ...stage.assignment,
+                        roleId,
+                      };
                       if (scopeType) assignment.scopeType = scopeType;
                       else delete assignment.scopeType;
                       updateStage(index, {
@@ -542,52 +658,62 @@ export function WorkflowForm({
                     disabled={isSubmitting}
                   />
                 )}
-                {stage.approverType === 'ROLE' && (() => {
-                  const role = roles.find((item) => item.id === stage.assignment.roleId);
-                  const scopes = role ? getRoleSupportedScopes(role) : [];
-                  if (scopes.length > 1) {
-                    return (
-                      <Select
-                        label="Approver eligibility"
-                        value={stage.assignment.scopeType ?? ''}
-                        placeholder="Choose an exact scope"
-                        onChange={(event) =>
-                          updateStage(index, {
-                            assignment: {
-                              ...stage.assignment,
-                              scopeType: event.target.value as 'ORGANIZATION' | 'DEPARTMENT',
-                            },
-                          })
-                        }
-                        options={scopes.map((scope) => ({
-                          value: scope,
-                          label: scope === 'ORGANIZATION'
+                {stage.approverType === 'ROLE' &&
+                  (() => {
+                    const role = roles.find((item) => item.id === stage.assignment.roleId);
+                    const scopes = role
+                      ? getRoleSupportedScopes(role).filter(
+                          (scope) =>
+                            values.workflowScope !== 'ORGANIZATION' || scope === 'ORGANIZATION',
+                        )
+                      : [];
+                    if (scopes.length > 1) {
+                      return (
+                        <Select
+                          label="Approver eligibility"
+                          value={stage.assignment.scopeType ?? ''}
+                          placeholder="Choose an exact scope"
+                          onChange={(event) =>
+                            updateStage(index, {
+                              assignment: {
+                                ...stage.assignment,
+                                scopeType: event.target.value as 'ORGANIZATION' | 'DEPARTMENT',
+                              },
+                            })
+                          }
+                          options={scopes.map((scope) => ({
+                            value: scope,
+                            label:
+                              scope === 'ORGANIZATION'
+                                ? 'Organization-wide role holders'
+                                : 'Members of the request department',
+                          }))}
+                          helperText="Choose exactly which assignments can approve this stage."
+                          disabled={isSubmitting}
+                        />
+                      );
+                    }
+                    if (scopes.length === 1) {
+                      return (
+                        <p className="workflow-form__scope-note">
+                          Approver eligibility:{' '}
+                          {scopes[0] === 'ORGANIZATION'
                             ? 'Organization-wide role holders'
-                            : 'Members of the request department',
-                        }))}
-                        helperText="Choose exactly which assignments can approve this stage."
-                        disabled={isSubmitting}
-                      />
-                    );
-                  }
-                  if (scopes.length === 1) {
-                    return (
+                            : 'Members of the request department'}
+                        </p>
+                      );
+                    }
+                    return role ? (
+                      <Alert variant="warning" title="Role scope configuration required">
+                        Configure supported scopes for {role.name} before using it as a workflow
+                        approver.
+                      </Alert>
+                    ) : (
                       <p className="workflow-form__scope-note">
-                        Approver eligibility: {scopes[0] === 'ORGANIZATION'
-                          ? 'Organization-wide role holders'
-                          : 'Members of the request department'}
+                        Select a role to view its supported scopes.
                       </p>
                     );
-                  }
-                  return role ? (
-                    <Alert variant="warning" title="Role scope configuration required">
-                      Configure supported scopes for {role.name} before using it as a workflow
-                      approver.
-                    </Alert>
-                  ) : (
-                    <p className="workflow-form__scope-note">Select a role to view its supported scopes.</p>
-                  );
-                })()}
+                  })()}
               </div>
               {stage.approverType !== 'DEPARTMENT_MANAGER' && (
                 <WorkflowConditionBuilder
@@ -600,13 +726,16 @@ export function WorkflowForm({
                 />
               )}
               <div className="workflow-form__condition-preview">
-                {stage.approverType === 'DEPARTMENT_MANAGER'
-                  ? 'The mandatory Department Manager stage always applies.'
-                  : stage.condition
-                    ? `Runs when ${formatWorkflowCondition(stage.condition, requestFields())}.`
-                    : 'This stage always applies.'}
+                <strong>When it runs</strong>
+                <span>
+                  {stage.approverType === 'DEPARTMENT_MANAGER'
+                    ? 'This required review runs for every request.'
+                    : stage.condition
+                      ? `When ${formatWorkflowCondition(stage.condition, requestFields())}.`
+                      : 'For every request that reaches this stage.'}
+                </span>
               </div>
-              <div className="workflow-form__grid">
+              <div className="workflow-form__grid workflow-form__grid--stage">
                 <Select
                   label="Stage SLA"
                   value={stage.sla ? 'enabled' : 'disabled'}

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { IconLink } from '@/components/common/IconLink';
 import {
   Table,
   TableBody,
@@ -79,16 +80,19 @@ export function RoleTable({ roles, isLoading, canEdit, hasFilters }: RoleTablePr
               <TableCell>{formatDate(role.updatedAt)}</TableCell>
               <TableCell>
                 <div className="role-table__actions">
-                  <Link className="role-table__action-link" to={`${APP_ROUTES.roles}/${role.id}`}>
-                    View
-                  </Link>
+                  <IconLink
+                    icon="view"
+                    className="role-table__action-link"
+                    label={`View ${role.name}`}
+                    to={`${APP_ROUTES.roles}/${role.id}`}
+                  />
                   {canEdit && (
-                    <Link
+                    <IconLink
+                      icon="edit"
                       className="role-table__action-link"
+                      label={`Edit ${role.name}`}
                       to={`${APP_ROUTES.roles}/${role.id}/edit`}
-                    >
-                      Edit
-                    </Link>
+                    />
                   )}
                 </div>
               </TableCell>

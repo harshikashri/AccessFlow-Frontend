@@ -1,5 +1,5 @@
 import { lazy, Suspense, type PropsWithChildren } from 'react';
-import { createBrowserRouter, RouterProvider, useLocation } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, useLocation } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 import App from '@/app/App';
 import { ForbiddenPage } from '@/app/pages/ForbiddenPage';
@@ -39,11 +39,11 @@ import { AuditLogDetailsPage } from '@/features/audit-logs/pages/AuditLogDetails
 import { AuditLogsPage } from '@/features/audit-logs/pages/AuditLogsPage';
 import { SettingsOverviewPage } from '@/features/settings/pages/SettingsOverviewPage';
 import { ProfileSettingsPage } from '@/features/settings/pages/ProfileSettingsPage';
-import { PreferencesSettingsPage } from '@/features/settings/pages/PreferencesSettingsPage';
-import { NotificationSettingsPage } from '@/features/settings/pages/NotificationSettingsPage';
 import { SecuritySettingsPage } from '@/features/settings/pages/SecuritySettingsPage';
 import { OrganizationSettingsPage } from '@/features/settings/pages/OrganizationSettingsPage';
+import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { useAuth } from '@/features/auth/context/useAuth';
+import { isPlatformSession } from '@/features/authorization/navigation';
 import { getAuthReturnPath } from '@/features/auth/utils/auth-navigation';
 import { WorkspaceLayout } from '@/layouts/WorkspaceLayout';
 import { AuthorizationRoute } from '@/routes/AuthorizationRoute';
@@ -74,6 +74,11 @@ function PrivateRoute({ children }: PropsWithChildren) {
   );
 }
 
+function TenantSettingsRoute({ children }: PropsWithChildren) {
+  const { user } = useAuth();
+  return isPlatformSession(user) ? <Navigate to={APP_ROUTES.settingsProfile} replace /> : children;
+}
+
 const routes: RouteObject[] = [
   {
     path: APP_ROUTES.root,
@@ -84,6 +89,70 @@ const routes: RouteObject[] = [
     ),
     children: [
       { index: true, element: <App /> },
+      {
+        path: 'dashboard/request-summary',
+        element: (
+          <AuthorizationRoute itemId="dashboard-request-summary">
+            <DashboardPage section="request-summary" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/approval-summary',
+        element: (
+          <AuthorizationRoute itemId="dashboard-approval-summary">
+            <DashboardPage section="approval-summary" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/approval-activity',
+        element: (
+          <AuthorizationRoute itemId="dashboard-approval-activity">
+            <DashboardPage section="approval-activity" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/user-statistics',
+        element: (
+          <AuthorizationRoute itemId="dashboard-user-statistics">
+            <DashboardPage section="user-statistics" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/department-overview',
+        element: (
+          <AuthorizationRoute itemId="dashboard-department-overview">
+            <DashboardPage section="department-overview" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/org-analytics',
+        element: (
+          <AuthorizationRoute itemId="platform-organization-analytics">
+            <DashboardPage section="organization-analytics" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/user-analytics',
+        element: (
+          <AuthorizationRoute itemId="platform-user-analytics">
+            <DashboardPage section="user-analytics" />
+          </AuthorizationRoute>
+        ),
+      },
+      {
+        path: 'dashboard/platform-usage',
+        element: (
+          <AuthorizationRoute itemId="platform-usage">
+            <DashboardPage section="platform-usage" />
+          </AuthorizationRoute>
+        ),
+      },
       {
         path: 'organizations',
         element: (
@@ -312,10 +381,15 @@ const routes: RouteObject[] = [
       { path: 'profile', element: <ProfilePage /> },
       { path: 'settings', element: <SettingsOverviewPage /> },
       { path: 'settings/profile', element: <ProfileSettingsPage /> },
-      { path: 'settings/preferences', element: <PreferencesSettingsPage /> },
-      { path: 'settings/notifications', element: <NotificationSettingsPage /> },
       { path: 'settings/security', element: <SecuritySettingsPage /> },
-      { path: 'settings/organization', element: <OrganizationSettingsPage /> },
+      {
+        path: 'settings/organization',
+        element: (
+          <TenantSettingsRoute>
+            <OrganizationSettingsPage />
+          </TenantSettingsRoute>
+        ),
+      },
       { path: '403', element: <ForbiddenPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],

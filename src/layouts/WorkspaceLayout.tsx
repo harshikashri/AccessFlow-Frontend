@@ -13,6 +13,7 @@ import {
   WorkspaceBrand,
   WorkspaceBreadcrumbs,
   WorkspaceHeaderActions,
+  WorkspaceSidebarAccountActions,
 } from '@/layouts/WorkspaceHeader';
 import { WorkspaceNavigation } from '@/layouts/WorkspaceNavigation';
 import { APP_ROUTES } from '@/routes/route.constants';
@@ -84,7 +85,8 @@ export function WorkspaceLayout() {
     <DashboardLayout
       sidebarBrand={<WorkspaceBrand />}
       sidebar={<WorkspaceNavigation sections={sections} collapsed={sidebarCollapsed} />}
-      sidebarFooter={<span className="workspace-sidebar-footer">Secure workspace</span>}
+      sidebarFooter={<WorkspaceSidebarAccountActions />}
+      sidebarFooterClassName="dashboard-sidebar__footer--actions"
       sidebarCollapsed={sidebarCollapsed}
       onSidebarCollapsedChange={setSidebarCollapsed}
       title={<WorkspaceBreadcrumbs />}

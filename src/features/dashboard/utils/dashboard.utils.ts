@@ -6,6 +6,9 @@ import type {
   DashboardConfiguration,
   DashboardDateRangeFilter,
   DashboardKpi,
+  DashboardSection,
+  OrganizationDashboardSection,
+  PlatformDashboardSection,
   DashboardWidget,
 } from '@/features/dashboard/types/dashboard.types';
 
@@ -14,9 +17,28 @@ const platformWidgetKeys = new Set([
   'ORGANIZATION_ANALYTICS',
   'USER_ANALYTICS',
   'PLATFORM_USAGE_ANALYTICS',
-  'DEPARTMENT_ANALYTICS',
   'PLATFORM_ACTIVITY',
 ]);
+
+const platformWidgetKeysBySection: Record<PlatformDashboardSection, readonly string[]> = {
+  overview: [
+    'PLATFORM_OVERVIEW',
+    'ORGANIZATION_ANALYTICS',
+    'USER_ANALYTICS',
+    'PLATFORM_USAGE_ANALYTICS',
+  ],
+  'organization-analytics': ['ORGANIZATION_ANALYTICS'],
+  'user-analytics': ['USER_ANALYTICS'],
+  'platform-usage': ['PLATFORM_USAGE_ANALYTICS', 'PLATFORM_ACTIVITY'],
+};
+
+const organizationWidgetKeysBySection: Record<OrganizationDashboardSection, readonly string[]> = {
+  'request-summary': ['REQUEST_SUMMARY'],
+  'approval-summary': ['APPROVAL_SUMMARY'],
+  'approval-activity': ['APPROVAL_ACTIVITY'],
+  'user-statistics': ['USER_STATISTICS'],
+  'department-overview': ['DEPARTMENT_OVERVIEW'],
+};
 
 const kpiProvidersByKey: Record<string, readonly string[]> = {
   TOTAL_REQUESTS: ['REQUESTS', 'PLATFORM'],
@@ -120,6 +142,27 @@ export function getAuthorizedDashboardWidgets(
   user: AuthenticatedUser,
 ): DashboardWidget[] {
   return configuration.widgets.filter((widget) => isDashboardWidgetAuthorized(widget, user));
+}
+
+export function getDashboardSectionWidgets(
+  configuration: DashboardConfiguration,
+  user: AuthenticatedUser,
+  section: DashboardSection,
+): DashboardWidget[] {
+  const authorizedWidgets = getAuthorizedDashboardWidgets(configuration, user);
+  if (!isPlatformSession(user)) {
+    if (section === 'overview') return authorizedWidgets;
+    if (!(section in organizationWidgetKeysBySection)) return [];
+    const sectionWidgetKeys = new Set(
+      organizationWidgetKeysBySection[section as OrganizationDashboardSection],
+    );
+    return authorizedWidgets.filter((widget) => sectionWidgetKeys.has(widget.key));
+  }
+  if (!(section in platformWidgetKeysBySection)) return [];
+  const sectionWidgetKeys = new Set(
+    platformWidgetKeysBySection[section as PlatformDashboardSection],
+  );
+  return authorizedWidgets.filter((widget) => sectionWidgetKeys.has(widget.key));
 }
 
 export function getAnalyticsProviders(

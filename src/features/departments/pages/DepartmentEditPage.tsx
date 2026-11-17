@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { BackLink } from '@/components/common/BackLink';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Alert, Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
@@ -59,14 +60,10 @@ export function DepartmentEditPage() {
   if (!validId) {
     return (
       <div className="workspace-page department-page">
+        <BackLink to={APP_ROUTES.departments} label="Back to departments" />
         <ErrorState
           title="Invalid department link"
           description="The department ID in this address is not valid."
-          action={
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.departments)}>
-              Back to departments
-            </Button>
-          }
         />
       </div>
     );
@@ -82,6 +79,7 @@ export function DepartmentEditPage() {
   if (!detailsQuery.data) {
     return (
       <div className="workspace-page department-page">
+        <BackLink to={APP_ROUTES.departments} label="Back to departments" />
         <ErrorState
           title="Department could not be edited"
           description={getAuthErrorMessage(
@@ -92,9 +90,6 @@ export function DepartmentEditPage() {
             <div className="department-error-actions">
               <Button variant="outline" onClick={() => void detailsQuery.refetch()}>
                 Retry
-              </Button>
-              <Button variant="ghost" onClick={() => navigate(APP_ROUTES.departments)}>
-                Back to departments
               </Button>
             </div>
           }
@@ -107,17 +102,10 @@ export function DepartmentEditPage() {
   if (department.status === 'INACTIVE') {
     return (
       <div className="workspace-page department-page">
+        <BackLink to={`${APP_ROUTES.departments}/${department.id}`} label="Back to department" />
         <ErrorState
           title="Inactive departments cannot be edited"
           description="Activate the department before changing its name or description."
-          action={
-            <Button
-              variant="outline"
-              onClick={() => navigate(`${APP_ROUTES.departments}/${department.id}`)}
-            >
-              Back to department
-            </Button>
-          }
         />
       </div>
     );
@@ -177,14 +165,10 @@ export function DepartmentEditPage() {
         eyebrow="Department profile"
         title="Edit department"
         description={`Update the supported details for ${department.name}.`}
-        actions={
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${APP_ROUTES.departments}/${department.id}`)}
-          >
-            Back to details
-          </Button>
-        }
+        backLink={{
+          to: `${APP_ROUTES.departments}/${department.id}`,
+          label: 'Back to details',
+        }}
       />
       {formError && (
         <Alert variant="error" title="Unable to save department">

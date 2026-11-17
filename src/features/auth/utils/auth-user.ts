@@ -26,7 +26,8 @@ export function isAuthenticatedUser(value: unknown): value is AuthenticatedUser 
     return (
       value.organizationId === null &&
       value.authorization.organizationPermissions.length === 0 &&
-      Object.keys(value.authorization.departmentPermissions).length === 0
+      Object.keys(value.authorization.departmentPermissions).length === 0 &&
+      (value.authorization.rolePermissions?.length ?? 0) === 0
     );
   }
 

@@ -27,22 +27,26 @@ export function ProfileSettingsPage() {
             {getAuthErrorMessage(update.error || query.error, 'Try again.')}
           </Alert>
         )}
-        <Input
-          label="Full name"
-          name="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <Input label="Email" name="email" value={query.data?.email || ''} disabled />
-        <Button
-          loading={update.isPending}
-          disabled={!name.trim()}
-          onClick={() =>
-            void update.mutateAsync({ name: name.trim() }).then(() => refreshCurrentUser())
-          }
+        <form
+          className="settings-profile-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void update.mutateAsync({ name: name.trim() }).then(() => refreshCurrentUser());
+          }}
         >
-          Save profile
-        </Button>
+          <Input
+            label="Full name"
+            name="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+          <Input label="Email" name="email" value={query.data?.email || ''} disabled />
+          <div className="settings-profile-form__actions">
+            <Button type="submit" loading={update.isPending} disabled={!name.trim()}>
+              Save profile
+            </Button>
+          </div>
+        </form>
       </Card>
     </SettingsLayout>
   );

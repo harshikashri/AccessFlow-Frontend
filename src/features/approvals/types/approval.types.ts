@@ -10,7 +10,8 @@ export interface ApprovalRequestSummary {
   requestTypeName: string | null;
   title: string;
   requesterId: string;
-  departmentId: string;
+  requesterName?: string | null;
+  departmentId: string | null;
   status: RequestStatus;
   currentSequence: number;
   submittedAt: string | null;

@@ -144,12 +144,6 @@
   gap: var(--space-4);
 }
 
-.role-form__note {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-}
-
 .role-overview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
@@ -180,11 +174,6 @@
   margin: 0;
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
-}
-
-.role-overview dd code {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
 }
 
 .role-overview__scope-note {
@@ -296,10 +285,14 @@
 .role-assignment-candidates {
   display: grid;
   max-height: 16rem;
-  gap: var(--space-2);
+  gap: var(--space-1);
   overflow-y: auto;
-  margin: 0;
-  padding: 0;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
   list-style: none;
 }
 
@@ -316,7 +309,8 @@
   text-align: left;
 }
 
-.role-assignment-candidate[aria-pressed='true'] {
+.role-assignment-candidate:hover,
+.role-assignment-candidate[aria-selected='true'] {
   border-color: var(--color-primary);
   background: var(--color-information-surface);
 }

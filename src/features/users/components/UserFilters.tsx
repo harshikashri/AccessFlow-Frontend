@@ -1,8 +1,7 @@
 import { Button, Input, Select } from '@/components/ui';
 import type {
-  UserRole,
+  UserRoleFilterOption,
   UserSortField,
-  UserSortOrder,
   UserStatus,
 } from '@/features/users/types/user.types';
 import type { Department } from '@/features/departments/types/department.types';
@@ -13,19 +12,20 @@ interface UserFiltersProps {
   departmentId: string;
   roleId: string;
   sortBy: UserSortField;
-  sortOrder: UserSortOrder;
   departments: Department[];
-  roles: UserRole[];
+  roles: UserRoleFilterOption[];
   departmentsLoading: boolean;
   rolesLoading: boolean;
   departmentFilterError?: string | null;
   roleFilterError?: string | null;
+  departmentFilterDisabled?: boolean;
+  roleFilterDisabled?: boolean;
+  hideDepartmentFilter?: boolean;
   onSearchChange: (value: string) => void;
   onStatusChange: (value: UserStatus | '') => void;
   onDepartmentChange: (value: string) => void;
   onRoleChange: (value: string) => void;
   onSortByChange: (value: UserSortField) => void;
-  onSortOrderChange: (value: UserSortOrder) => void;
   onClear: () => void;
   hasFilters: boolean;
 }
@@ -53,34 +53,40 @@ export function UserFilters(props: UserFiltersProps) {
           { value: 'INACTIVE', label: 'Inactive account' },
         ]}
       />
-      <Select
-        label="Department"
-        name="departmentId"
-        value={props.departmentId}
-        placeholder="All departments"
-        disabled={props.departmentsLoading || Boolean(props.departmentFilterError)}
-        {...(props.departmentFilterError || props.departmentsLoading
-          ? {
-              helperText:
-                props.departmentFilterError ??
-                (props.departmentsLoading ? 'Loading departments…' : ''),
-            }
-          : {})}
-        onChange={(event) => props.onDepartmentChange(event.target.value)}
-        options={[
-          { value: 'null', label: 'Unassigned' },
-          ...props.departments.map((department) => ({
-            value: department.id,
-            label: `${department.name}${department.status === 'INACTIVE' ? ' (inactive)' : ''}`,
-          })),
-        ]}
-      />
+      {!props.hideDepartmentFilter && (
+        <Select
+          label="Department"
+          name="departmentId"
+          value={props.departmentId}
+          placeholder="All departments"
+          disabled={
+            props.departmentFilterDisabled ||
+            props.departmentsLoading ||
+            Boolean(props.departmentFilterError)
+          }
+          {...(props.departmentFilterError || props.departmentsLoading
+            ? {
+                helperText:
+                  props.departmentFilterError ??
+                  (props.departmentsLoading ? 'Loading departments…' : ''),
+              }
+            : {})}
+          onChange={(event) => props.onDepartmentChange(event.target.value)}
+          options={[
+            { value: 'null', label: 'Unassigned' },
+            ...props.departments.map((department) => ({
+              value: department.id,
+              label: `${department.name}${department.status === 'INACTIVE' ? ' (inactive)' : ''}`,
+            })),
+          ]}
+        />
+      )}
       <Select
         label="Role"
         name="roleId"
         value={props.roleId}
         placeholder="All roles"
-        disabled={props.rolesLoading || Boolean(props.roleFilterError)}
+        disabled={props.roleFilterDisabled || props.rolesLoading || Boolean(props.roleFilterError)}
         {...(props.roleFilterError || props.rolesLoading
           ? {
               helperText: props.roleFilterError ?? (props.rolesLoading ? 'Loading roles…' : ''),
@@ -100,16 +106,6 @@ export function UserFilters(props: UserFiltersProps) {
           { value: 'accountStatus', label: 'Account status' },
           { value: 'createdAt', label: 'Date created' },
           { value: 'updatedAt', label: 'Last updated' },
-        ]}
-      />
-      <Select
-        label="Sort order"
-        name="sortOrder"
-        value={props.sortOrder}
-        onChange={(event) => props.onSortOrderChange(event.target.value as UserSortOrder)}
-        options={[
-          { value: 'asc', label: 'Ascending' },
-          { value: 'desc', label: 'Descending' },
         ]}
       />
       {props.hasFilters && (

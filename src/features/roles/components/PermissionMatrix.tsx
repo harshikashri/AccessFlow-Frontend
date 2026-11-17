@@ -22,11 +22,9 @@ export function PermissionMatrix({
   readOnly = false,
 }: PermissionMatrixProps) {
   const [search, setSearch] = useState('');
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(
-    () => new Set(modules.map((module) => module.id)),
-  );
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(() => new Set());
   useEffect(() => {
-    setExpandedModules(new Set(modules.map((module) => module.id)));
+    setExpandedModules(new Set());
   }, [modules]);
   const filteredModules = useMemo(
     () => filterPermissionModules(modules, search),
@@ -47,9 +45,7 @@ export function PermissionMatrix({
       <div className="permission-matrix__toolbar">
         <div>
           <h2>Permissions</h2>
-          <p>
-            {value.length} selected · Permission definitions are loaded from the backend catalog.
-          </p>
+          <p>{value.length} selected</p>
         </div>
         <Input
           label="Search permissions"
@@ -87,6 +83,7 @@ export function PermissionMatrix({
                   <button
                     className="permission-group__toggle"
                     type="button"
+                    aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${module.name} permissions`}
                     aria-expanded={isExpanded}
                     onClick={() =>
                       setExpandedModules((current) => {

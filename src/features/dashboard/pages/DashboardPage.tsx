@@ -9,6 +9,8 @@ import { DashboardGrid } from '@/features/dashboard/components/DashboardGrid';
 import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader';
 import { DashboardSkeleton } from '@/features/dashboard/components/DashboardSkeleton';
 import { KpiCard } from '@/features/dashboard/components/KpiCard';
+import { OrganizationDashboardOverview } from '@/features/dashboard/components/OrganizationDashboardOverview';
+import { PlatformDashboardOverview } from '@/features/dashboard/components/PlatformDashboardOverview';
 import { QuickActions } from '@/features/dashboard/components/QuickActions';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -22,11 +24,12 @@ import type {
   DashboardConfiguration,
   DashboardDateRangeFilter,
   DashboardKpi,
+  DashboardSection,
   DashboardWidget,
 } from '@/features/dashboard/types/dashboard.types';
 import {
   formatDashboardKpi,
-  getAuthorizedDashboardWidgets,
+  getDashboardSectionWidgets,
   getDashboardKpis,
   isDashboardAnalyticsProvider,
   isValidDashboardDateFilter,
@@ -90,16 +93,29 @@ function hasAnalyticsWidget(widgets: readonly DashboardWidget[]): boolean {
 function DashboardWorkspace({
   user,
   configuration,
+  section,
 }: {
   user: AuthenticatedUser;
   configuration: DashboardConfiguration;
+  section: DashboardSection;
 }) {
   const queryClient = useQueryClient();
   const defaultFilter = getDefaultFilter(configuration);
   const [filter, setFilter] = useState<DashboardDateRangeFilter>(defaultFilter);
   const [activityPage, setActivityPage] = useState(1);
-  const widgets = getAuthorizedDashboardWidgets(configuration, user);
-  const { summary, analytics } = useDashboardContent(user, configuration, filter, activityPage);
+  const widgets = getDashboardSectionWidgets(configuration, user, section);
+  const dashboardClassName =
+    configuration.dashboardType === 'PLATFORM'
+      ? 'workspace-page dashboard-page dashboard-page--platform'
+      : section === 'overview'
+        ? 'workspace-page dashboard-page dashboard-page--organization-overview'
+        : 'workspace-page dashboard-page';
+  const { summary, analytics } = useDashboardContent(
+    user,
+    { ...configuration, widgets },
+    filter,
+    activityPage,
+  );
   const isRefreshing = useIsFetching({ queryKey: dashboardQueryKeys.user(user.id) }) > 0;
   const hasCustomRange = configuration.availableFilters.dateRange.includes('CUSTOM');
   const validFilter = isValidDashboardDateFilter(
@@ -119,6 +135,10 @@ function DashboardWorkspace({
   );
   const summaryMismatch =
     summary.data !== undefined && summary.data.dashboardType !== configuration.dashboardType;
+  const deferredWidgets =
+    summary.data?.deferredWidgets.filter((deferredWidget) =>
+      widgets.some((widget) => widget.key === deferredWidget.key),
+    ) ?? [];
 
   function applyFilter(nextFilter: DashboardDateRangeFilter) {
     setFilter(nextFilter);
@@ -131,9 +151,10 @@ function DashboardWorkspace({
 
   if (configuration.widgets.length === 0 || widgets.length === 0) {
     return (
-      <div className="workspace-page">
+      <div className={dashboardClassName}>
         <DashboardHeader
           type={configuration.dashboardType}
+          section={section}
           userName={user.name}
           refreshing={isRefreshing}
           onRefresh={() => void refreshDashboard()}
@@ -145,9 +166,10 @@ function DashboardWorkspace({
 
   if (summaryMismatch) {
     return (
-      <div className="workspace-page dashboard-page">
+      <div className={dashboardClassName}>
         <DashboardHeader
           type={configuration.dashboardType}
+          section={section}
           userName={user.name}
           refreshing={isRefreshing}
           onRefresh={() => void refreshDashboard()}
@@ -161,9 +183,10 @@ function DashboardWorkspace({
   }
 
   return (
-    <div className="workspace-page dashboard-page">
+    <div className={dashboardClassName}>
       <DashboardHeader
         type={configuration.dashboardType}
+        section={section}
         userName={user.name}
         refreshing={isRefreshing}
         onRefresh={() => void refreshDashboard()}
@@ -195,9 +218,25 @@ function DashboardWorkspace({
           onRetry={() => void refreshDashboard()}
         />
       )}
-      {!summary.isPending && !summary.isError && kpis.length > 0 && (
-        <DashboardGrid variant="kpis">{kpis.map(renderKpi)}</DashboardGrid>
-      )}
+      {!summary.isPending &&
+        !summary.isError &&
+        kpis.length > 0 &&
+        (configuration.dashboardType === 'PLATFORM' && section === 'overview' ? (
+          <PlatformDashboardOverview kpis={kpis} analytics={analytics} />
+        ) : configuration.dashboardType === 'PLATFORM' ? (
+          <dl className="dashboard-overview-metrics" aria-label="Platform overview metrics">
+            {kpis.map((kpi) => (
+              <div key={kpi.key}>
+                <dt>{kpi.title}</dt>
+                <dd>{formatDashboardKpi(kpi.value, kpi.format, kpi.unit)}</dd>
+              </div>
+            ))}
+          </dl>
+        ) : section === 'overview' ? (
+          <OrganizationDashboardOverview kpis={kpis} analytics={analytics} widgets={widgets} />
+        ) : (
+          <DashboardGrid variant="kpis">{kpis.map(renderKpi)}</DashboardGrid>
+        ))}
       {!summary.isPending &&
         !summary.isError &&
         kpis.length === 0 &&
@@ -207,31 +246,35 @@ function DashboardWorkspace({
             description="The configured widgets do not currently provide data for this session."
           />
         )}
-      {summary.data?.deferredWidgets.length ? (
+      {deferredWidgets.length > 0 ? (
         <p className="dashboard-page__deferred">
           Some configured dashboard data is not available yet:{' '}
-          {summary.data.deferredWidgets.map((widget) => widget.title).join(', ')}.
+          {deferredWidgets.map((widget) => widget.title).join(', ')}.
         </p>
       ) : null}
-      {dataWidgets.length > 0 && (
-        <DashboardGrid>
-          {dataWidgets.map((widget) => (
-            <AnalyticsWidget
-              key={widget.key}
-              widget={widget}
-              query={
-                typeof widget.analyticsProvider === 'string' &&
-                isDashboardAnalyticsProvider(widget.analyticsProvider)
-                  ? analytics.get(widget.analyticsProvider)
-                  : undefined
-              }
-              activityPage={activityPage}
-              onActivityPageChange={setActivityPage}
-            />
-          ))}
-        </DashboardGrid>
+      {dataWidgets.length > 0 &&
+        !(configuration.dashboardType === 'PLATFORM' && section === 'overview') &&
+        !(configuration.dashboardType !== 'PLATFORM' && section === 'overview') && (
+          <DashboardGrid>
+            {dataWidgets.map((widget) => (
+              <AnalyticsWidget
+                key={widget.key}
+                widget={widget}
+                query={
+                  typeof widget.analyticsProvider === 'string' &&
+                  isDashboardAnalyticsProvider(widget.analyticsProvider)
+                    ? analytics.get(widget.analyticsProvider)
+                    : undefined
+                }
+                activityPage={activityPage}
+                onActivityPageChange={setActivityPage}
+              />
+            ))}
+          </DashboardGrid>
+        )}
+      {configuration.dashboardType !== 'PLATFORM' && section === 'overview' && (
+        <QuickActions user={user} />
       )}
-      <QuickActions user={user} />
       {hasCustomRange && (
         <p className="dashboard-page__timezone">
           Date ranges use {configuration.dateRangeOptions.timeZone} and the{' '}
@@ -242,7 +285,13 @@ function DashboardWorkspace({
   );
 }
 
-function DashboardConfigurationPage({ user }: { user: AuthenticatedUser }) {
+function DashboardConfigurationPage({
+  user,
+  section,
+}: {
+  user: AuthenticatedUser;
+  section: DashboardSection;
+}) {
   const configurationQuery = useDashboardConfiguration(user);
   if (configurationQuery.isPending) return <DashboardSkeleton />;
   if (configurationQuery.isError) {
@@ -269,10 +318,17 @@ function DashboardConfigurationPage({ user }: { user: AuthenticatedUser }) {
     );
   }
 
-  return <DashboardWorkspace key={user.id} user={user} configuration={configuration} />;
+  return (
+    <DashboardWorkspace
+      key={`${user.id}-${section}`}
+      user={user}
+      configuration={configuration}
+      section={section}
+    />
+  );
 }
 
-export function DashboardPage() {
+export function DashboardPage({ section = 'overview' }: { section?: DashboardSection }) {
   const { authorizationStatus, user } = useAuth();
 
   if (!user || authorizationStatus !== 'available') {
@@ -284,5 +340,5 @@ export function DashboardPage() {
     );
   }
 
-  return <DashboardConfigurationPage user={user} />;
+  return <DashboardConfigurationPage user={user} section={section} />;
 }

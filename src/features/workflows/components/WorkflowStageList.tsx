@@ -6,9 +6,13 @@ import { formatWorkflowCondition } from './workflow-form.utils';
 export function WorkflowStageList({
   stages,
   requestFields = [],
+  roleNames = {},
+  roleNamesLoading = false,
 }: {
   stages: WorkflowStage[];
   requestFields?: RequestField[];
+  roleNames?: Readonly<Record<string, string>>;
+  roleNamesLoading?: boolean;
 }) {
   if (!stages.length) {
     return <p className="workflow-muted">No approval stages are configured.</p>;
@@ -29,14 +33,19 @@ export function WorkflowStageList({
                   <p>{stage.description || 'Approval stage'}</p>
                 </div>
                 <span className="workflow-stage-card__type">
-                  {stage.approverType.replaceAll('_', ' ')}
+                  {stage.approverType === 'ROLE' && stage.assignment.roleId
+                    ? (roleNames[stage.assignment.roleId] ??
+                      (roleNamesLoading ? 'Loading role name…' : 'Role name unavailable'))
+                    : stage.approverType.replaceAll('_', ' ')}
                 </span>
               </div>
               <dl className="workflow-stage-card__details">
-                <div>
-                  <dt>Resolution</dt>
-                  <dd>{stage.assignment.resolution.replace('_', ' ')}</dd>
-                </div>
+                {stage.assignment.resolution !== 'CLAIM_ONE' && (
+                  <div>
+                    <dt>Resolution</dt>
+                    <dd>{stage.assignment.resolution.replace('_', ' ')}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Approval mode</dt>
                   <dd>{stage.approvalMode}</dd>
@@ -65,12 +74,6 @@ export function WorkflowStageList({
                       : 'Not configured'}
                   </dd>
                 </div>
-                {stage.assignment.roleId && (
-                  <div>
-                    <dt>Approval role</dt>
-                    <dd>{stage.assignment.roleId}</dd>
-                  </div>
-                )}
                 {stage.assignment.roleId && stage.assignment.scopeType && (
                   <div>
                     <dt>Eligible approvers</dt>

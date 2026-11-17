@@ -43,7 +43,7 @@ export function RequestEditPage() {
 
   useEffect(() => {
     if (!detailQuery.data) return;
-    setDepartmentId(detailQuery.data.departmentId);
+    setDepartmentId(detailQuery.data.departmentId ?? '');
     setTitle(detailQuery.data.title);
     setDescription(detailQuery.data.description);
     setPriority(detailQuery.data.priority);
@@ -84,7 +84,7 @@ export function RequestEditPage() {
     setError(null);
     try {
       await update.mutateAsync({
-        departmentId,
+        ...(departmentId ? { departmentId } : {}),
         title,
         description,
         priority,
@@ -115,16 +115,23 @@ export function RequestEditPage() {
           </Alert>
         )}
         <div className="request-form-meta">
-          <Select
-            label="Department"
-            name="departmentId"
-            value={departmentId}
-            onChange={(event) => setDepartmentId(event.target.value)}
-            options={(departmentsQuery.data ?? []).map((department) => ({
-              value: department.id,
-              label: department.name,
-            }))}
-          />
+          {request.departmentId ? (
+            <Select
+              label="Department"
+              name="departmentId"
+              value={departmentId}
+              onChange={(event) => setDepartmentId(event.target.value)}
+              options={(departmentsQuery.data ?? []).map((department) => ({
+                value: department.id,
+                label: department.name,
+              }))}
+            />
+          ) : (
+            <div className="request-form-meta__organization-scope">
+              <span className="ui-field__label">Request scope</span>
+              <strong>Organization-level</strong>
+            </div>
+          )}
           <Input
             label="Title"
             name="title"

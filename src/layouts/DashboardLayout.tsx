@@ -7,6 +7,7 @@ export interface DashboardLayoutProps extends PropsWithChildren {
   sidebar?: ReactNode;
   sidebarBrand?: ReactNode;
   sidebarFooter?: ReactNode;
+  sidebarFooterClassName?: string;
   title?: ReactNode;
   headerActions?: ReactNode;
   sidebarCollapsed?: boolean;
@@ -18,6 +19,7 @@ export function DashboardLayout({
   sidebar,
   sidebarBrand,
   sidebarFooter,
+  sidebarFooterClassName,
   title,
   headerActions,
   sidebarCollapsed = false,
@@ -49,6 +51,7 @@ export function DashboardLayout({
       <Sidebar
         brand={sidebarBrand}
         footer={sidebarFooter}
+        {...(sidebarFooterClassName ? { footerClassName: sidebarFooterClassName } : {})}
         open={sidebarOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => onSidebarCollapsedChange?.(!sidebarCollapsed)}

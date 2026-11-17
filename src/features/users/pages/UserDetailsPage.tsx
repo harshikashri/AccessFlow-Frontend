@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AppIcon } from '@/components/common/AppIcon';
 import { PageHeader } from '@/components/common/PageHeader';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -221,7 +222,10 @@ export function UserDetailsPage() {
         actions={
           <div className="user-page__header-actions">
             {canEditProfile && (
-              <Button onClick={() => navigate(`${APP_ROUTES.users}/${targetUser.id}/edit`)}>
+              <Button
+                leadingIcon={<AppIcon name="edit" size={16} />}
+                onClick={() => navigate(`${APP_ROUTES.users}/${targetUser.id}/edit`)}
+              >
                 Edit profile
               </Button>
             )}

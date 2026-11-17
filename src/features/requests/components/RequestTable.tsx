@@ -45,16 +45,16 @@ export function RequestTable({ items, isLoading, hasFilters, onClearFilters }: P
   }
   return (
     <Table>
-      <TableHeader>
+      <TableHead>
         <TableRow>
-          <TableHead>Request</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Requester</TableHead>
-          <TableHead>Department</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Updated</TableHead>
+          <TableHeader scope="col">Request</TableHeader>
+          <TableHeader scope="col">Type</TableHeader>
+          <TableHeader scope="col">Requester</TableHeader>
+          <TableHeader scope="col">Department</TableHeader>
+          <TableHeader scope="col">Status</TableHeader>
+          <TableHeader scope="col">Updated</TableHeader>
         </TableRow>
-      </TableHeader>
+      </TableHead>
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id}>

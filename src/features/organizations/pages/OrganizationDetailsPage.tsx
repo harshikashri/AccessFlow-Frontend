@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { AppIcon } from '@/components/common/AppIcon';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { BackLink } from '@/components/common/BackLink';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Alert, Button, Card } from '@/components/ui';
+import { Button, Card } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -38,6 +40,7 @@ function OrganizationDetailsContent({
   if (!detailsQuery.data) {
     return (
       <div className="workspace-page organization-page">
+        <BackLink to={APP_ROUTES.organizations} label="Back to organizations" />
         <ErrorState
           title="Organization details unavailable"
           description={getAuthErrorMessage(
@@ -48,9 +51,6 @@ function OrganizationDetailsContent({
             <div className="organization-error-actions">
               <Button variant="outline" onClick={() => void detailsQuery.refetch()}>
                 Retry
-              </Button>
-              <Button variant="ghost" onClick={() => navigate(APP_ROUTES.organizations)}>
-                Back to organizations
               </Button>
             </div>
           }
@@ -92,13 +92,12 @@ function OrganizationDetailsContent({
         eyebrow="Organization details"
         title={organization.name}
         description="Organization profile and supported platform statistics."
+        backLink={{ to: APP_ROUTES.organizations, label: 'Back to organizations' }}
         actions={
           <div className="organization-page__header-actions">
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.organizations)}>
-              Back
-            </Button>
             <Button
               variant="outline"
+              leadingIcon={<AppIcon name="edit" size={16} />}
               onClick={() => navigate(`${APP_ROUTES.organizations}/${organization.id}/edit`)}
             >
               Edit organization
@@ -156,11 +155,6 @@ function OrganizationDetailsContent({
           </dl>
         </Card>
       </div>
-
-      <Alert variant="information" title="Additional organization records">
-        Individual department and user lists, contact profile fields, and organization-specific
-        activity history are not exposed by the current organization API.
-      </Alert>
 
       <OrganizationStatusDialog
         organization={organization}

@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, type InputHTMLAttributes } from 'react';
 
 export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string;
+  visuallyHiddenLabel?: boolean;
   helperText?: string;
   error?: string;
   indeterminate?: boolean;
@@ -10,6 +11,7 @@ export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement
 export function Checkbox({
   id,
   label,
+  visuallyHiddenLabel = false,
   helperText,
   error,
   indeterminate = false,
@@ -39,7 +41,10 @@ export function Checkbox({
         aria-describedby={error || helperText ? `${inputId}-message` : undefined}
       />
       <div>
-        <label className="ui-choice__label" htmlFor={inputId}>
+        <label
+          className={visuallyHiddenLabel ? 'ui-choice__label sr-only' : 'ui-choice__label'}
+          htmlFor={inputId}
+        >
           {label}
         </label>
         {(error || helperText) && (

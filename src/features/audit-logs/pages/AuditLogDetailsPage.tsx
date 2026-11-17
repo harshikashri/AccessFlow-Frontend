@@ -1,6 +1,7 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Button, Card } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { ErrorState } from '@/components/feedback/ErrorState';
+import { IconButton } from '@/components/common/IconButton';
 import { PageHeader } from '@/components/common/PageHeader';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -63,9 +64,12 @@ export function AuditLogDetailsPage() {
         title={`${item.resourceType} activity`}
         description={new Date(item.timestamp).toLocaleString()}
         actions={
-          <Button variant="outline" onClick={() => void query.refetch()}>
-            Refresh
-          </Button>
+          <IconButton
+            variant="outline"
+            icon="refresh"
+            label="Refresh audit event"
+            onClick={() => void query.refetch()}
+          />
         }
       />
       <div className="audit-detail-grid">

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { BackLink } from '@/components/common/BackLink';
 import { PageHeader } from '@/components/common/PageHeader';
-import { Button } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -36,17 +36,13 @@ function OrganizationEditContent({
   if (!detailsQuery.data) {
     return (
       <div className="workspace-page organization-page">
+        <BackLink to={APP_ROUTES.organizations} label="Back to organizations" />
         <ErrorState
           title="Organization could not be edited"
           description={getAuthErrorMessage(
             detailsQuery.error,
             'The organization details could not be loaded.',
           )}
-          action={
-            <Button variant="outline" onClick={() => navigate(APP_ROUTES.organizations)}>
-              Back to organizations
-            </Button>
-          }
         />
       </div>
     );
@@ -84,14 +80,10 @@ function OrganizationEditContent({
         eyebrow="Organization profile"
         title="Edit organization"
         description={`Update the supported profile information for ${organization.name}.`}
-        actions={
-          <Button
-            variant="outline"
-            onClick={() => navigate(`${APP_ROUTES.organizations}/${organization.id}`)}
-          >
-            Back to details
-          </Button>
-        }
+        backLink={{
+          to: `${APP_ROUTES.organizations}/${organization.id}`,
+          label: 'Back to details',
+        }}
       />
       <OrganizationForm
         key={`${organization.id}-${organization.updatedAt}`}

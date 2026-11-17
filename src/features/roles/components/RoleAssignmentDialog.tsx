@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Alert, Button, Input, Modal, Select } from '@/components/ui';
 import { useAuth } from '@/features/auth/context/useAuth';
@@ -53,7 +53,10 @@ export function RoleAssignmentDialog({
     user && hasPermission(user.authorization, 'departments.view', 'organization-or-department'),
   );
   const [searchInput, setSearchInput] = useState('');
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [activeCandidateIndex, setActiveCandidateIndex] = useState(-1);
   const debouncedSearch = useDebounce(searchInput.trim(), 250);
+  const userSearchListId = useId();
   const trimmedSearch = searchInput.trim();
   const search =
     trimmedSearch.length >= 2 && trimmedSearch === debouncedSearch ? debouncedSearch : '';
@@ -67,6 +70,8 @@ export function RoleAssignmentDialog({
   useEffect(() => {
     if (!open) return;
     setSearchInput('');
+    setSuggestionsOpen(false);
+    setActiveCandidateIndex(-1);
     setSelectedUser(null);
     setDepartmentId('');
     setScopeType(getDefaultScope(role));
@@ -106,6 +111,13 @@ export function RoleAssignmentDialog({
   const candidateUsers = (usersQuery.data?.users ?? []).filter(
     (candidate) => candidate.accountStatus === 'ACTIVE' && candidate.membership.status === 'ACTIVE',
   );
+  const activeCandidate = candidateUsers[activeCandidateIndex];
+  const showUserSuggestions =
+    suggestionsOpen &&
+    search.length >= 2 &&
+    !usersQuery.isPending &&
+    !usersQuery.isError &&
+    candidateUsers.length > 0;
   const activeDepartments = (departmentsQuery.data ?? []).filter(
     (department) => department.status === 'ACTIVE',
   );
@@ -127,6 +139,43 @@ export function RoleAssignmentDialog({
     canAssignRoleAtScope(user, role, scopeType, selectedDepartmentId),
   );
 
+  function selectCandidate(candidate: UserProfile) {
+    setSelectedUser(candidate);
+    setSearchInput(candidate.name);
+    setSuggestionsOpen(false);
+    setActiveCandidateIndex(-1);
+    setSaveError(null);
+  }
+
+  function handleUserSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape' && suggestionsOpen) {
+      event.preventDefault();
+      event.stopPropagation();
+      setSuggestionsOpen(false);
+      setActiveCandidateIndex(-1);
+      return;
+    }
+    if (!candidateUsers.length) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setActiveCandidateIndex((current) => Math.min(current + 1, candidateUsers.length - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSuggestionsOpen(true);
+      setActiveCandidateIndex((current) =>
+        current <= 0 ? candidateUsers.length - 1 : current - 1,
+      );
+    } else if (event.key === 'Enter' && showUserSuggestions && activeCandidateIndex >= 0) {
+      const candidate = candidateUsers[activeCandidateIndex];
+      if (candidate) {
+        event.preventDefault();
+        selectCandidate(candidate);
+      }
+    }
+  }
+
   async function submitAssignment() {
     const selectedScope = scopeType;
     if (!selectedUser || !selectedScope || !canAssign || isSaving || isDuplicate) return;
@@ -147,9 +196,6 @@ export function RoleAssignmentDialog({
     <Modal
       open={open}
       title={`Assign ${role.name}`}
-      description={
-        'The backend validates active membership, the selected assignment scope, role compatibility, and your permission scope.'
-      }
       onOpenChange={(nextOpen) => {
         if (!isSaving) onOpenChange(nextOpen);
       }}
@@ -190,20 +236,77 @@ export function RoleAssignmentDialog({
         </Alert>
       ) : (
         <div className="role-assignment-form">
-          <Input
-            label="Find a user"
-            name="userSearch"
-            type="search"
-            placeholder="Search by name or email"
-            value={searchInput}
-            maxLength={100}
-            onChange={(event) => {
-              setSearchInput(event.target.value);
-              setSelectedUser(null);
-              setDepartmentId('');
+          <div
+            className="role-assignment-form__user-search"
+            onBlur={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              ) {
+                setSuggestionsOpen(false);
+                setActiveCandidateIndex(-1);
+              }
             }}
-            helperText="Enter at least two characters. Only active accounts with active organization membership can be assigned."
-          />
+          >
+            <Input
+              label="Find a user"
+              name="userSearch"
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded={showUserSuggestions}
+              aria-controls={userSearchListId}
+              {...(showUserSuggestions && activeCandidate
+                ? {
+                    'aria-activedescendant': `${userSearchListId}-option-${activeCandidate.id}`,
+                  }
+                : {})}
+              autoComplete="off"
+              placeholder="Search by name or email"
+              value={searchInput}
+              maxLength={100}
+              onFocus={() => setSuggestionsOpen(true)}
+              onKeyDown={handleUserSearchKeyDown}
+              onChange={(event) => {
+                setSearchInput(event.target.value);
+                setSelectedUser(null);
+                setDepartmentId('');
+                setActiveCandidateIndex(-1);
+                setSuggestionsOpen(true);
+              }}
+              helperText="Enter at least two characters. Only active accounts with active organization membership can be assigned."
+            />
+            {showUserSuggestions && (
+              <ul
+                id={userSearchListId}
+                className="role-assignment-candidates"
+                role="listbox"
+                aria-label="User search results"
+              >
+                {candidateUsers.map((candidate, index) => (
+                  <li key={candidate.id} role="presentation">
+                    <button
+                      id={`${userSearchListId}-option-${candidate.id}`}
+                      className="role-assignment-candidate"
+                      type="button"
+                      role="option"
+                      aria-selected={selectedUser?.id === candidate.id}
+                      onMouseMove={() => setActiveCandidateIndex(index)}
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => selectCandidate(candidate)}
+                    >
+                      <span>
+                        <strong>{candidate.name}</strong>
+                        <small>{candidate.email}</small>
+                      </span>
+                      {selectedUser?.id === candidate.id && <span>Selected</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           {search.length < 2 ? (
             <p className="role-assignment-form__hint">Search results will appear here.</p>
           ) : usersQuery.isError ? (
@@ -221,29 +324,7 @@ export function RoleAssignmentDialog({
             <p className="role-assignment-form__hint">
               No active organization members match this search.
             </p>
-          ) : (
-            <ul className="role-assignment-candidates" aria-label="User search results">
-              {candidateUsers.map((candidate) => (
-                <li key={candidate.id}>
-                  <button
-                    className="role-assignment-candidate"
-                    type="button"
-                    aria-pressed={selectedUser?.id === candidate.id}
-                    onClick={() => {
-                      setSelectedUser(candidate);
-                      setSaveError(null);
-                    }}
-                  >
-                    <span>
-                      <strong>{candidate.name}</strong>
-                      <small>{candidate.email}</small>
-                    </span>
-                    {selectedUser?.id === candidate.id && <span>Selected</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          ) : null}
         </div>
       )}
 
@@ -267,7 +348,8 @@ export function RoleAssignmentDialog({
           />
         ) : supportedScopes.length === 1 ? (
           <p>
-            Assignment scope: {supportedScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
+            Assignment scope:{' '}
+            {supportedScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
           </p>
         ) : null}
         {scopeType === 'DEPARTMENT' &&

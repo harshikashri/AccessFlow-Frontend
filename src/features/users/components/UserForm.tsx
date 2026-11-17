@@ -166,7 +166,9 @@ export function UserForm(props: UserFormProps) {
             : "Only the user name and email address can be changed here. Changing the email revokes the user's sessions across organizations."
         }
       >
-        <div className="user-form__fields">
+        <div
+          className={`user-form__fields${props.mode === 'create' ? ' user-form__fields--create' : ''}`}
+        >
           <Input
             label="Full name"
             name="name"
@@ -204,7 +206,6 @@ export function UserForm(props: UserFormProps) {
                   label: department.name,
                 })),
               ]}
-              helperText="Department membership is optional."
               disabled={props.isSubmitting || Boolean(props.referenceError)}
             />
           )}
@@ -271,7 +272,8 @@ export function UserForm(props: UserFormProps) {
                   />
                 ) : selectedRoleScopes.length === 1 ? (
                   <p className="user-form__note">
-                    Assignment scope: {selectedRoleScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
+                    Assignment scope:{' '}
+                    {selectedRoleScopes[0] === 'ORGANIZATION' ? 'Organization' : 'Department'}
                   </p>
                 ) : null}
                 {scopeType === 'DEPARTMENT' && (

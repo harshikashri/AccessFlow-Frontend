@@ -51,9 +51,15 @@ export interface UserPagination {
   hasPreviousPage: boolean;
 }
 
+export interface UserRoleFilterOption {
+  id: string;
+  name: string;
+}
+
 export interface UserListResponse {
   users: UserProfile[];
   pagination: UserPagination;
+  roleOptions?: UserRoleFilterOption[];
 }
 
 export interface UserListParams {

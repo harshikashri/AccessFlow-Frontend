@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/common/PageHeader';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { Alert, Button } from '@/components/ui';
+import { Alert } from '@/components/ui';
 import { useToast } from '@/components/ui/useToast';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { getAuthError, getAuthErrorMessage } from '@/features/auth/services/auth-errors';
@@ -116,11 +116,10 @@ export function UserCreatePage() {
         eyebrow="Users"
         title="Add a user"
         description="Create an organization membership and send password setup instructions. The global account remains inactive until setup is complete."
-        actions={
-          <Button variant="outline" onClick={() => navigate(backPath)}>
-            {canViewDirectory ? 'Back to users' : 'Back to workspace'}
-          </Button>
-        }
+        backLink={{
+          to: backPath,
+          label: canViewDirectory ? 'Back to users' : 'Back to workspace',
+        }}
       />
       {formError && (
         <Alert variant="error" title="Unable to create user">

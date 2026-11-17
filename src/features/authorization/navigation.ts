@@ -1,6 +1,11 @@
 import type { AuthenticatedUser } from '@/features/auth/types/auth.types';
 import type { AuthorizationStatus } from '@/features/auth/types/auth.types';
-import { hasAllPermissions, hasAnyPermission, isAuthorizationInfo } from './permissions';
+import {
+  hasAllPermissions,
+  hasAnyPermission,
+  isAuthorizationInfo,
+  isDepartmentMember,
+} from './permissions';
 import type { NavigationItem, NavigationRequirement, NavigationSection } from './navigation.config';
 import { NAVIGATION_SECTIONS } from './navigation.config';
 
@@ -17,6 +22,9 @@ function canAccessRequirement(
   if (requirement.kind === 'authenticated') return Boolean(user);
   if (requirement.kind === 'platform-session') return isPlatformSession(user);
   if (isPlatformSession(user)) return false;
+  if (requirement.kind === 'all') {
+    return requirement.requirements.every((item) => canAccessRequirement(user, item));
+  }
 
   const check = requirement.mode === 'all' ? hasAllPermissions : hasAnyPermission;
   return check(user.authorization, requirement.permissions, requirement.scope);
@@ -54,8 +62,18 @@ export function getVisibleNavigation(
   const sections = isPlatformSession(user)
     ? NAVIGATION_SECTIONS.filter((section) => section.id === 'platform')
     : NAVIGATION_SECTIONS.filter((section) => section.id !== 'platform');
+  const userSections = isDepartmentMember(user.authorization)
+    ? sections.map((section) => ({
+        ...section,
+        items: section.items.map((item) => {
+          if (item.id !== 'request-center') return item;
+          const myRequests = item.children?.find((child) => child.id === 'my-requests-category');
+          return { ...item, children: myRequests?.children ?? [] };
+        }),
+      }))
+    : sections;
 
-  return sections
+  return userSections
     .map((section) => ({
       ...section,
       items: section.items

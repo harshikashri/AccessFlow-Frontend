@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { dashboardQueryKeys } from '@/features/dashboard/hooks/dashboard-query-keys';
 import { departmentQueryKeys } from '@/features/departments/hooks/department-query-keys';
 import { userQueryKeys } from '@/features/users/hooks/user-query-keys';
@@ -57,6 +57,21 @@ export function useRoleDetails(
     queryKey: roleQueryKeys.details(actorId, organizationId, roleId),
     queryFn: () => roleService.get(roleId),
     enabled: enabled && actorId.length > 0 && organizationId.length > 0 && roleId.length > 0,
+  });
+}
+
+export function useRoleDetailsByIds(
+  actorId: string,
+  organizationId: string,
+  roleIds: string[],
+  enabled = true,
+) {
+  return useQueries({
+    queries: [...new Set(roleIds)].map((roleId) => ({
+      queryKey: roleQueryKeys.details(actorId, organizationId, roleId),
+      queryFn: () => roleService.get(roleId),
+      enabled: enabled && actorId.length > 0 && organizationId.length > 0,
+    })),
   });
 }
 

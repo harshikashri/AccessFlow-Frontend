@@ -34,7 +34,7 @@ export function WorkflowListPage() {
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput.trim(), 300);
   const search = searchInput.trim() ? debouncedSearch : '';
-  const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE' | ''>('');
+  const [status, setStatus] = useState<'ACTIVE' | 'INACTIVE' | ''>('ACTIVE');
   const [requestTypeId, setRequestTypeId] = useState('');
   const [page, setPage] = useState(1);
   const organizationId = user?.organizationId ?? '';
@@ -165,6 +165,7 @@ export function WorkflowListPage() {
                   <TableRow>
                     <TableHeader>Workflow</TableHeader>
                     <TableHeader>Request type</TableHeader>
+                    <TableHeader>Request scope</TableHeader>
                     <TableHeader>Selection rule</TableHeader>
                     <TableHeader>Stages</TableHeader>
                     <TableHeader>Status</TableHeader>
@@ -193,6 +194,11 @@ export function WorkflowListPage() {
                           (workflow.isDefault ? 'All request types' : 'Request type unavailable')}
                       </TableCell>
                       <TableCell>
+                        {workflow.workflowScope === 'ORGANIZATION'
+                          ? 'Organization-level'
+                          : 'Department-level'}
+                      </TableCell>
+                      <TableCell>
                         {workflow.isDefault
                           ? 'Fallback only'
                           : workflow.selectionCondition
@@ -216,7 +222,7 @@ export function WorkflowListPage() {
             ) : (
               <Table>
                 <TableBody>
-                  <TableEmptyState colSpan={6}>
+                  <TableEmptyState colSpan={7}>
                     <strong>
                       {hasFilters ? 'No matching workflows' : 'No workflows configured'}
                     </strong>

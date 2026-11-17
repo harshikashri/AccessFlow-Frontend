@@ -1,90 +1,72 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Input } from '@/components/ui';
+import { Alert, Button, Card } from '@/components/ui';
 import { PageHeader } from '@/components/common/PageHeader';
 import { getAuthErrorMessage } from '@/features/auth/services/auth-errors';
+import { authService } from '@/features/auth/services/auth.service';
 import { useAuth } from '@/features/auth/context/useAuth';
 import { SettingsLayout } from '../components/SettingsLayout';
-import { useChangePassword, useRevokeSession, useSessions } from '../hooks/useSettings';
 
 export function SecuritySettingsPage() {
-  const { logoutAll } = useAuth();
-  const sessions = useSessions();
-  const revoke = useRevokeSession();
-  const change = useChangePassword();
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const { user } = useAuth();
+  const [isRequestingPasswordReset, setIsRequestingPasswordReset] = useState(false);
+  const [passwordResetMessage, setPasswordResetMessage] = useState<string | null>(null);
+  const [passwordResetError, setPasswordResetError] = useState<string | null>(null);
+
+  async function requestPasswordReset() {
+    setPasswordResetMessage(null);
+    setPasswordResetError(null);
+    if (!user?.email) {
+      setPasswordResetError('We could not find an email address for your account.');
+      return;
+    }
+
+    setIsRequestingPasswordReset(true);
+    try {
+      const requestMessage = await authService.forgotPassword(user.email);
+      setPasswordResetMessage(
+        `${requestMessage} Account email: ${user.email}. If delivered, check your inbox and spam folder for the link.`,
+      );
+    } catch (requestError) {
+      setPasswordResetError(
+        getAuthErrorMessage(
+          requestError,
+          'We could not request a password reset. Please try again.',
+        ),
+      );
+    } finally {
+      setIsRequestingPasswordReset(false);
+    }
+  }
+
   return (
     <SettingsLayout>
       <PageHeader
         eyebrow="Settings"
-        title="Security and sessions"
-        description="Review active sessions and change your password without exposing session secrets."
+        title="Security"
+        description="Change your password using an email link. Sign-out options are available at the bottom of the sidebar."
       />
-      <Card title="Change password">
-        {change.isError && (
-          <Alert variant="error" title="Password change failed">
-            {getAuthErrorMessage(change.error, 'Try again.')}
+      <Card
+        title="Change password"
+        description="For your security, password changes are completed through a one-time link sent to your email."
+      >
+        {passwordResetError && (
+          <Alert variant="error" title="Password reset request failed">
+            {passwordResetError}
           </Alert>
         )}
-        <Input
-          label="Current password"
-          name="currentPassword"
-          type="password"
-          value={currentPassword}
-          onChange={(event) => setCurrentPassword(event.target.value)}
-        />
-        <Input
-          label="New password"
-          name="password"
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        <Input
-          label="Confirm password"
-          name="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
-        />
-        <Button
-          loading={change.isPending}
-          disabled={!currentPassword || !password || password !== confirmPassword}
-          onClick={() => void change.mutateAsync({ currentPassword, password, confirmPassword })}
-        >
-          Change password
-        </Button>
-      </Card>
-      <Card
-        title="Active sessions"
-        description="Refresh tokens and session secrets are never displayed."
-      >
-        <Button variant="outline" onClick={() => void logoutAll()}>
-          Log out all sessions
-        </Button>
-        {sessions.isError && (
-          <p>{getAuthErrorMessage(sessions.error, 'Sessions could not be loaded.')}</p>
+        {passwordResetMessage && (
+          <Alert variant="success" title="Request received">
+            {passwordResetMessage}
+          </Alert>
         )}
-        <div className="settings-session-list">
-          {sessions.data?.map((session) => (
-            <div className="settings-session" key={session.id}>
-              <span>
-                {session.current ? 'Current session' : 'Active session'} · last used{' '}
-                {session.lastUsedAt ? new Date(session.lastUsedAt).toLocaleString() : '—'}
-              </span>
-              {!session.current && !session.revokedAt && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  loading={revoke.isPending}
-                  onClick={() => void revoke.mutateAsync(session.id)}
-                >
-                  Revoke
-                </Button>
-              )}
-            </div>
-          ))}
+        <div className="settings-password-form__actions">
+          <Button
+            type="button"
+            loading={isRequestingPasswordReset}
+            onClick={() => void requestPasswordReset()}
+          >
+            Change password
+          </Button>
         </div>
       </Card>
     </SettingsLayout>

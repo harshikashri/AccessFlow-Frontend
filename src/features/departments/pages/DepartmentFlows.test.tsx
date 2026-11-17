@@ -194,7 +194,9 @@ describe('department details actions', () => {
     expect((await screen.findAllByText('Morgan Manager')).length).toBeGreaterThan(0);
     expect(screen.getByText('Product engineering')).toBeTruthy();
     expect(screen.getByText('Active members')).toBeTruthy();
-    expect(screen.getByText(/Department audit events are recorded by the backend/)).toBeTruthy();
+    expect(screen.queryByText(/Activity history|Department audit events/)).toBeNull();
+    expect(screen.queryByText('Organization ID')).toBeNull();
+    expect(screen.queryByText('Department ID')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Deactivate' }));
     expect(await screen.findByRole('dialog')).toBeTruthy();
     expect(screen.getByText(/Existing member and manager assignments are retained/)).toBeTruthy();
